@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#FF6B57">
+<title>旅遊小幫手</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header id="topbar">
+    <span id="appTitle">🧳 旅遊小幫手</span>
+    <select id="tripSelect" title="切換旅程"></select>
+    <button id="syncBtn" title="共享與同步">🔗</button>
+    <button id="newTripBtn">＋新旅程</button>
+  </header>
+
+  <nav id="tabs">
+    <button class="tab active" data-view="itinerary">🗓️ 行程</button>
+    <button class="tab" data-view="expenses">💰 分帳</button>
+    <button class="tab" data-view="notebook">📔 資訊</button>
+  </nav>
+
+  <main id="main">
+    <!-- 無旅程時的空狀態 -->
+    <section id="emptyState" class="hidden">
+      <div class="emptyArt">🏝️</div>
+      <p>還沒有旅程，先建立一個吧！</p>
+      <button id="emptyCreateBtn" class="primary big">建立第一個旅程</button>
+    </section>
+
+    <!-- 行程檢視 -->
+    <section id="itineraryView" class="view hidden">
+      <div id="dayChips"></div>
+      <div id="map"></div>
+      <div id="dayStartRow" class="card slim">
+        <span>🕘 這天的出發時間</span>
+        <input id="dayStartInput" type="time">
+        <span class="mutedText">之後每站抵達時間自動推算</span>
+      </div>
+      <div id="searchBox">
+        <input id="placeInput" type="search" placeholder="搜尋地點，或貼上 Google Maps 網址" autocomplete="off">
+        <button id="searchBtn" class="primary">搜尋</button>
+      </div>
+      <ul id="searchResults" class="hidden"></ul>
+      <ul id="stopList"></ul>
+    </section>
+
+    <!-- 分帳檢視 -->
+    <section id="expensesView" class="view hidden">
+      <div class="card">
+        <h3>👥 成員</h3>
+        <div id="memberChips"></div>
+        <div class="row">
+          <input id="memberInput" type="text" placeholder="成員名字" autocomplete="off">
+          <button id="addMemberBtn">加入</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>💱 匯率</h3>
+        <div class="row" id="rateRow">
+          <span>1 <b class="localCur">JPY</b> =</span>
+          <input id="rateInput" type="number" step="0.0001" min="0" inputmode="decimal">
+          <span class="homeCur">TWD</span>
+          <button id="rateRefreshBtn" title="抓取即時匯率">↻</button>
+        </div>
+        <small id="rateInfo"></small>
+      </div>
+
+      <div class="card">
+        <h3>✍️ 新增支出</h3>
+        <div class="grid2">
+          <input id="expDesc" type="text" placeholder="項目（例：拉麵）">
+          <div class="row">
+            <input id="expAmount" type="number" min="0" step="0.01" placeholder="金額" inputmode="decimal">
+            <select id="expCurrency"></select>
+          </div>
+        </div>
+        <div id="expCategory" class="row wrap"></div>
+        <div class="row">
+          <label>誰付的：</label>
+          <select id="expPayer"></select>
+        </div>
+        <div id="expSplit" class="row wrap"></div>
+        <button id="addExpenseBtn" class="primary">記一筆 ✚</button>
+        <div id="expenseMsg"></div>
+      </div>
+
+      <div class="card">
+        <h3>📊 支出統計</h3>
+        <div id="statTotal"></div>
+        <div id="statBars"></div>
+      </div>
+
+      <div class="card">
+        <h3>🧾 支出明細</h3>
+        <ul id="expenseList"></ul>
+      </div>
+
+      <div class="card">
+        <h3>🤝 結算</h3>
+        <div id="balances"></div>
+        <div id="transfers"></div>
+        <div id="settledSection">
+          <h4>已還款紀錄</h4>
+          <div id="settledList"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 記事本檢視 -->
+    <section id="notebookView" class="view hidden">
+      <div class="card slim" id="noteAddRow">
+        <span>新增：</span>
+        <button class="noteAddBtn" data-type="hotel">🏨 飯店</button>
+        <button class="noteAddBtn" data-type="flight">✈️ 機票</button>
+        <button class="noteAddBtn" data-type="ticket">🎫 票券</button>
+        <button class="noteAddBtn" data-type="transport">🚃 交通</button>
+        <button class="noteAddBtn" data-type="memo">📝 筆記</button>
+      </div>
+      <div id="noteList"></div>
+    </section>
+  </main>
+
+  <!-- 共享／加入對話框 -->
+  <dialog id="syncDialog">
+    <h3>🔗 共享與同步</h3>
+    <div id="syncStatusLine" class="mutedText"></div>
+
+    <div id="shareSection">
+      <h4>分享這個旅程</h4>
+      <div id="shareUnlinked">
+        <p class="mutedText">上傳到雲端後會產生邀請碼，旅伴輸入邀請碼就能即時共編。</p>
+        <button id="shareBtn" class="primary">☁️ 上傳並產生邀請碼</button>
+      </div>
+      <div id="shareLinked" class="hidden">
+        <div class="inviteCodeBox">
+          <span id="inviteCode"></span>
+          <button id="copyCodeBtn">複製</button>
+        </div>
+        <p class="mutedText">把這組邀請碼傳給旅伴，改動會即時同步給所有人。</p>
+      </div>
+    </div>
+
+    <hr class="dashed">
+
+    <div id="joinSection">
+      <h4>加入旅伴的旅程</h4>
+      <div class="row">
+        <input id="joinCodeInput" type="text" placeholder="輸入邀請碼" autocomplete="off"
+               style="text-transform:uppercase">
+        <button id="joinBtn">加入</button>
+      </div>
+    </div>
+
+    <div id="syncMsg"></div>
+    <div class="row right">
+      <button id="syncCloseBtn">關閉</button>
+    </div>
+  </dialog>
+
+  <!-- 新旅程對話框 -->
+  <dialog id="tripDialog">
+    <form method="dialog" id="tripForm">
+      <h3>建立旅程</h3>
+      <label>旅程名稱<input id="tripName" type="text" required placeholder="例：東京五日遊"></label>
+      <label>出發日<input id="tripStart" type="date" required></label>
+      <label>回程日<input id="tripEnd" type="date" required></label>
+      <label>成員（用逗號分隔）<input id="tripMembers" type="text" placeholder="例：我, 小明, 小華"></label>
+      <div class="row right">
+        <button value="cancel" formnovalidate>取消</button>
+        <button value="ok" class="primary" id="tripCreateBtn">出發！</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+          integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
