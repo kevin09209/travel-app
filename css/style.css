@@ -309,7 +309,9 @@ input:focus, select:focus, textarea:focus {
 .stopMeta { display: flex; align-items: center; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
 .stopMeta select { width: auto; padding: 5px 8px; font-size: 13px; border-radius: 8px; }
 .stayWrap { display: flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 700; }
-.stayWrap select { width: auto; padding: 5px 6px; font-size: 13px; border-radius: 8px; }
+
+/* 原生 time picker（停留、車程共用）：不撐滿、僅容納「時:分」 */
+.timePicker { width: auto; padding: 5px 8px; font-size: 13px; border-radius: 8px; }
 
 .stopNote {
   width: 100%;
@@ -339,13 +341,6 @@ input:focus, select:focus, textarea:focus {
   font-size: 12px;
   font-weight: 700;
   color: var(--muted);
-}
-.travelConnector input {
-  width: 56px;
-  padding: 4px 6px;
-  font-size: 13px;
-  border-radius: 8px;
-  text-align: center;
 }
 
 /* ---------- 分帳 ---------- */
