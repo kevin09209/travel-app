@@ -28,6 +28,7 @@
     <button class="tab active" data-view="itinerary">🗓️ 行程</button>
     <button class="tab" data-view="expenses">💰 分帳</button>
     <button class="tab" data-view="notebook">📔 資訊</button>
+    <button class="tab" data-view="packing">🎒 清單</button>
   </nav>
 
   <main id="main">
@@ -129,6 +130,23 @@
         <button class="noteAddBtn" data-type="memo">📝 筆記</button>
       </div>
       <div id="noteList"></div>
+    </section>
+
+    <!-- 打包清單檢視 -->
+    <section id="packingView" class="view hidden">
+      <div class="card">
+        <h3>🎒 加入項目</h3>
+        <div class="row" id="packAddRow">
+          <input id="packNameInput" type="text" placeholder="要帶的東西…" autocomplete="off">
+          <select id="packCatSelect"></select>
+        </div>
+        <div class="row right">
+          <button id="packAddBtn" class="primary">加入 ✚</button>
+        </div>
+        <div id="packMsg"></div>
+      </div>
+      <div id="packProgress"></div>
+      <div id="packList"></div>
     </section>
   </main>
 

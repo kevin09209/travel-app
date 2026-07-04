@@ -310,8 +310,9 @@ input:focus, select:focus, textarea:focus {
 .stopMeta select { width: auto; padding: 5px 8px; font-size: 13px; border-radius: 8px; }
 .stayWrap { display: flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 700; }
 
-/* 原生 time picker（停留、車程共用）：不撐滿、僅容納「時:分」 */
-.timePicker { width: auto; padding: 5px 8px; font-size: 13px; border-radius: 8px; }
+/* 原生 time picker（停留、車程共用）：不撐滿、僅容納「時:分」
+   用 input.timePicker 拉高特異性，蓋過上面全域 input[type="time"] 的 width:100% */
+input.timePicker { width: 108px; flex-shrink: 0; padding: 5px 8px; font-size: 13px; border-radius: 8px; }
 
 .stopNote {
   width: 100%;
@@ -554,6 +555,58 @@ input:focus, select:focus, textarea:focus {
   border-style: dashed;
 }
 
+/* ---------- 打包清單 ---------- */
+#packAddRow input { flex: 1; min-width: 0; }
+#packAddRow select { width: auto; flex-shrink: 0; padding: 9px 8px; }
+#packMsg { color: var(--danger); font-size: 13px; min-height: 18px; margin-top: 4px; font-weight: 700; }
+#packProgress { font-weight: 800; margin: 0 2px 12px; }
+
+.packSection { margin-bottom: 16px; }
+.packSectionTitle { margin: 0 0 8px; font-size: 13px; font-weight: 800; color: var(--muted); padding-left: 2px; }
+.packItemList { list-style: none; margin: 0; padding: 0; }
+
+.packItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--card);
+  border: 2px solid var(--ink);
+  border-radius: 12px;
+  padding: 9px 12px;
+  margin-bottom: 8px;
+  box-shadow: var(--shadow-sm);
+}
+.packItem.checked { background: #F1EAE0; }
+
+.packItem input[type="checkbox"] {
+  width: auto;
+  flex-shrink: 0;
+  accent-color: var(--coral);
+  transform: scale(1.3);
+}
+
+.packItemName {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  font-size: 14px;
+  font-weight: 700;
+  padding: 2px 0;
+}
+.packItemName:focus { box-shadow: none; }
+.packItem.checked .packItemName { text-decoration: line-through; color: var(--muted); }
+
+.packItemDel {
+  border: none;
+  background: transparent;
+  color: var(--danger);
+  box-shadow: none;
+  padding: 2px 4px;
+  flex-shrink: 0;
+}
+.packItemDel:hover { transform: scale(1.2); box-shadow: none; }
+
 /* ---------- 共享同步 ---------- */
 #syncBtn.synced { background: var(--blue-soft); border-color: var(--blue); }
 #syncBtn.error { background: #FFE0E0; border-color: var(--danger); }
@@ -619,17 +672,17 @@ dialog input { margin-top: 4px; }
 .printHeader h1 { margin: 0 0 4px; font-size: 22px; }
 .printHeader p { margin: 0 0 20px; color: var(--muted); font-size: 13px; }
 
-.printDay, .printExpenses, .printNotes { margin-bottom: 18px; break-inside: avoid; }
-.printDay h2, .printExpenses h2, .printNotes h2 { font-size: 16px; margin: 0 0 8px; border-bottom: 2px solid var(--ink); padding-bottom: 4px; }
-.printExpenses h3, .printNotes h3 { font-size: 14px; margin: 12px 0 6px; }
+.printDay, .printExpenses, .printNotes, .printPacking { margin-bottom: 18px; break-inside: avoid; }
+.printDay h2, .printExpenses h2, .printNotes h2, .printPacking h2 { font-size: 16px; margin: 0 0 8px; border-bottom: 2px solid var(--ink); padding-bottom: 4px; }
+.printExpenses h3, .printNotes h3, .printPacking h3 { font-size: 14px; margin: 12px 0 6px; }
 
 .printStopList { margin: 0; padding-left: 20px; }
 .printStopList li { margin-bottom: 6px; font-size: 13px; }
 .printStopLine { font-weight: 700; }
 .printStopNote, .printTravel { color: var(--muted); font-size: 12px; margin-top: 2px; }
 
-.printExpenses ul, .printNotes ul { margin: 0 0 8px; padding-left: 20px; font-size: 13px; }
-.printExpenses li { margin-bottom: 4px; }
+.printExpenses ul, .printNotes ul, .printPacking ul { margin: 0 0 8px; padding-left: 20px; font-size: 13px; }
+.printExpenses li, .printPacking li { margin-bottom: 4px; }
 
 .printNoteCard { margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px dashed #33323D44; font-size: 13px; }
 .printNoteTitle { font-weight: 700; }
