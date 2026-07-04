@@ -473,61 +473,53 @@ function stopCard(stop, index, total, arrival) {
   return li;
 }
 
-// 把總分鐘數轉成「X 時 Y 分」的顯示文字
-function formatStayLabel(min) {
-  const h = Math.floor(min / 60);
-  const m = min % 60;
-  if (h === 0) return `${m} 分`;
-  if (m === 0) return `${h} 時`;
-  return `${h} 時 ${m} 分`;
+// 總分鐘數 <-> "HH:MM" 字串（給 <input type="time"> 用；手機上是左時右分的滾輪）
+function minToTimeStr(min) {
+  const clamped = Math.max(0, Math.min(min, 23 * 60 + 59));
+  const h = Math.floor(clamped / 60);
+  const m = clamped % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+}
+function timeStrToMin(str) {
+  const [h, m] = str.split(":").map((n) => parseInt(n, 10) || 0);
+  return h * 60 + m;
 }
 
-// 停留時間：單一下拉，時與分合併成一份清單，手機一次滑就選好（存回仍是總分鐘數）
+// 停留時間：原生 time picker，左時右分、分鐘 5 分一階（存回仍是總分鐘數）
 function stayPicker(stop) {
   const wrap = document.createElement("span");
   wrap.className = "stayWrap";
-
-  const total = Math.max(0, stop.stayMin || 0);
-  const values = [];
-  for (let m = 0; m <= 480; m += 15) values.push(m); // 0 分 ~ 8 時，每 15 分一階
-  if (!values.includes(total)) values.push(total); // 保留舊資料的非標準值
-  values.sort((a, b) => a - b);
-
-  const sel = document.createElement("select");
-  sel.className = "staySelect";
-  sel.title = "預計停留時間";
-  for (const m of values) {
-    const opt = document.createElement("option");
-    opt.value = String(m);
-    opt.textContent = formatStayLabel(m);
-    sel.appendChild(opt);
-  }
-  sel.value = String(total);
-  sel.addEventListener("change", () => {
-    store.updateStop(stop.id, { stayMin: parseInt(sel.value, 10) });
+  const inp = document.createElement("input");
+  inp.type = "time";
+  inp.step = "300"; // 5 分鐘一階
+  inp.className = "timePicker";
+  inp.value = minToTimeStr(stop.stayMin || 0);
+  inp.title = "預計停留時間（時:分）";
+  inp.addEventListener("change", () => {
+    if (!inp.value) return;
+    store.updateStop(stop.id, { stayMin: timeStrToMin(inp.value) });
   });
-
-  wrap.append(document.createTextNode("停留"), sel);
+  wrap.append(document.createTextNode("停留"), inp);
   return wrap;
 }
 
-// 兩站之間的交通時間（連接線）
+// 兩站之間的交通時間（連接線）：同樣用原生 time picker，左時右分、5 分一階
 function travelConnector(stop) {
   const li = document.createElement("li");
   li.className = "travelConnector";
   const icon = document.createElement("span");
   icon.textContent = "🚗";
   const input = document.createElement("input");
-  input.type = "number";
-  input.min = "0";
-  input.step = "5";
-  input.value = stop.travelMin;
-  input.title = "到下一站的交通時間（分鐘）";
+  input.type = "time";
+  input.step = "300";
+  input.className = "timePicker";
+  input.value = minToTimeStr(stop.travelMin || 0);
+  input.title = "到下一站的交通時間（時:分）";
   input.addEventListener("change", () => {
-    const v = Math.max(0, parseInt(input.value, 10) || 0);
-    store.updateStop(stop.id, { travelMin: v });
+    if (!input.value) return;
+    store.updateStop(stop.id, { travelMin: timeStrToMin(input.value) });
   });
-  li.append(icon, input, document.createTextNode("分鐘車程"));
+  li.append(icon, document.createTextNode("車程"), input);
   return li;
 }
 
