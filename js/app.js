@@ -363,6 +363,15 @@ function renderItinerary(trip) {
   mapView.renderDay(stops, STOP_CATS);
 }
 
+// 產生 Google Maps 導航網址：有座標就用座標，沒有就退回用地點名稱搜尋
+function googleMapsNavUrl(stop) {
+  const dest =
+    typeof stop.lat === "number" && typeof stop.lng === "number"
+      ? `${stop.lat},${stop.lng}`
+      : stop.name;
+  return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(dest)}`;
+}
+
 function stopCard(stop, index, total, arrival) {
   const cat = STOP_CATS[stop.category] || STOP_CATS.other;
   const li = document.createElement("li");
@@ -393,6 +402,19 @@ function stopCard(stop, index, total, arrival) {
   name.textContent = `${cat.emoji} ${stop.name}`;
   name.title = stop.name;
   name.addEventListener("click", () => mapView.panTo(stop.lat, stop.lng));
+
+  const navBtn = document.createElement("button");
+  navBtn.className = "stopNavBtn";
+  navBtn.textContent = "🧭";
+  navBtn.title = "在 Google Maps 導航";
+  navBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    window.open(googleMapsNavUrl(stop), "_blank", "noopener");
+  });
+
+  const nameRow = document.createElement("div");
+  nameRow.className = "stopNameRow";
+  nameRow.append(name, navBtn);
 
   const meta = document.createElement("div");
   meta.className = "stopMeta";
@@ -426,7 +448,7 @@ function stopCard(stop, index, total, arrival) {
   note.placeholder = "備註…";
   note.value = stop.note;
   note.addEventListener("change", () => store.updateStop(stop.id, { note: note.value }));
-  body.append(name, meta, note);
+  body.append(nameRow, meta, note);
 
   const btns = document.createElement("div");
   btns.className = "stopBtns";

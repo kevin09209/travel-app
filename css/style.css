@@ -283,6 +283,7 @@ input:focus, select:focus, textarea:focus {
 }
 
 .stopBody { flex: 1; min-width: 0; }
+.stopNameRow { display: flex; align-items: center; gap: 6px; }
 .stopName {
   font-weight: 800;
   font-size: 15px;
@@ -290,8 +291,20 @@ input:focus, select:focus, textarea:focus {
   text-overflow: ellipsis;
   white-space: nowrap;
   cursor: pointer;
+  flex: 1;
+  min-width: 0;
 }
 .stopName:hover { color: var(--coral); }
+
+.stopNavBtn {
+  flex-shrink: 0;
+  padding: 3px 8px;
+  font-size: 14px;
+  border-radius: 8px;
+  box-shadow: var(--shadow-sm);
+  background: var(--blue-soft);
+  border-color: var(--blue);
+}
 
 .stopMeta { display: flex; align-items: center; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
 .stopMeta select { width: auto; padding: 5px 8px; font-size: 13px; border-radius: 8px; }
