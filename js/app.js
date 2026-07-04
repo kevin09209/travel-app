@@ -473,45 +473,41 @@ function stopCard(stop, index, total, arrival) {
   return li;
 }
 
-// 停留時間：時 + 分兩個下拉，方便手機操作（存回仍是總分鐘數）
+// 把總分鐘數轉成「X 時 Y 分」的顯示文字
+function formatStayLabel(min) {
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  if (h === 0) return `${m} 分`;
+  if (m === 0) return `${h} 時`;
+  return `${h} 時 ${m} 分`;
+}
+
+// 停留時間：單一下拉，時與分合併成一份清單，手機一次滑就選好（存回仍是總分鐘數）
 function stayPicker(stop) {
   const wrap = document.createElement("span");
   wrap.className = "stayWrap";
 
   const total = Math.max(0, stop.stayMin || 0);
-  const hourSel = document.createElement("select");
-  for (let h = 0; h <= 12; h++) {
-    const opt = document.createElement("option");
-    opt.value = String(h);
-    opt.textContent = h;
-    hourSel.appendChild(opt);
-  }
-  const minSel = document.createElement("select");
-  for (let m = 0; m < 60; m += 5) {
+  const values = [];
+  for (let m = 0; m <= 480; m += 15) values.push(m); // 0 分 ~ 8 時，每 15 分一階
+  if (!values.includes(total)) values.push(total); // 保留舊資料的非標準值
+  values.sort((a, b) => a - b);
+
+  const sel = document.createElement("select");
+  sel.className = "staySelect";
+  sel.title = "預計停留時間";
+  for (const m of values) {
     const opt = document.createElement("option");
     opt.value = String(m);
-    opt.textContent = String(m).padStart(2, "0");
-    minSel.appendChild(opt);
+    opt.textContent = formatStayLabel(m);
+    sel.appendChild(opt);
   }
-  hourSel.value = String(Math.min(12, Math.floor(total / 60)));
-  minSel.value = String(Math.min(55, Math.round((total % 60) / 5) * 5));
-  hourSel.title = "停留時數";
-  minSel.title = "停留分鐘";
+  sel.value = String(total);
+  sel.addEventListener("change", () => {
+    store.updateStop(stop.id, { stayMin: parseInt(sel.value, 10) });
+  });
 
-  const save = () => {
-    const v = parseInt(hourSel.value, 10) * 60 + parseInt(minSel.value, 10);
-    store.updateStop(stop.id, { stayMin: v });
-  };
-  hourSel.addEventListener("change", save);
-  minSel.addEventListener("change", save);
-
-  wrap.append(
-    document.createTextNode("停留"),
-    hourSel,
-    document.createTextNode("時"),
-    minSel,
-    document.createTextNode("分")
-  );
+  wrap.append(document.createTextNode("停留"), sel);
   return wrap;
 }
 
