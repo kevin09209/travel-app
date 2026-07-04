@@ -428,20 +428,7 @@ function stopCard(stop, index, total, arrival) {
   catSel.value = stop.category;
   catSel.addEventListener("change", () => store.updateStop(stop.id, { category: catSel.value }));
 
-  const stayWrap = document.createElement("span");
-  stayWrap.className = "stayWrap";
-  const stay = document.createElement("input");
-  stay.type = "number";
-  stay.min = "0";
-  stay.step = "5";
-  stay.value = stop.stayMin;
-  stay.title = "預計停留（分鐘）";
-  stay.addEventListener("change", () => {
-    const v = Math.max(0, parseInt(stay.value, 10) || 0);
-    store.updateStop(stop.id, { stayMin: v });
-  });
-  stayWrap.append(document.createTextNode("停留"), stay, document.createTextNode("分"));
-  meta.append(catSel, stayWrap);
+  meta.append(catSel, stayPicker(stop));
 
   const note = document.createElement("input");
   note.className = "stopNote";
@@ -484,6 +471,44 @@ function stopCard(stop, index, total, arrival) {
   });
 
   return li;
+}
+
+// 把總分鐘數轉成「X 時 Y 分」的顯示文字
+function formatStayLabel(min) {
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  if (h === 0) return `${m} 分`;
+  if (m === 0) return `${h} 時`;
+  return `${h} 時 ${m} 分`;
+}
+
+// 停留時間：單一下拉，時與分合併成一份清單，手機一次滑就選好（存回仍是總分鐘數）
+function stayPicker(stop) {
+  const wrap = document.createElement("span");
+  wrap.className = "stayWrap";
+
+  const total = Math.max(0, stop.stayMin || 0);
+  const values = [];
+  for (let m = 0; m <= 480; m += 15) values.push(m); // 0 分 ~ 8 時，每 15 分一階
+  if (!values.includes(total)) values.push(total); // 保留舊資料的非標準值
+  values.sort((a, b) => a - b);
+
+  const sel = document.createElement("select");
+  sel.className = "staySelect";
+  sel.title = "預計停留時間";
+  for (const m of values) {
+    const opt = document.createElement("option");
+    opt.value = String(m);
+    opt.textContent = formatStayLabel(m);
+    sel.appendChild(opt);
+  }
+  sel.value = String(total);
+  sel.addEventListener("change", () => {
+    store.updateStop(stop.id, { stayMin: parseInt(sel.value, 10) });
+  });
+
+  wrap.append(document.createTextNode("停留"), sel);
+  return wrap;
 }
 
 // 兩站之間的交通時間（連接線）
