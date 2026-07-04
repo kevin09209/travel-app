@@ -4,6 +4,30 @@ import { DEFAULT_HOME_CURRENCY, DEFAULT_LOCAL_CURRENCY } from "./config.js";
 
 const STORAGE_KEY = "travel-app:v1";
 
+// 打包清單預設項目（category 對應 app.js 的 PACKING_CATS key）
+// 注意：這個常數必須定義在 `let state = load()` 之前——load() 會在模組載入當下就
+// 同步跑到 normalizeTrip() → defaultPackingItems()，晚宣告會撞 TDZ ReferenceError。
+const DEFAULT_PACKING = {
+  docs: ["護照", "電子簽證", "信用卡", "外幣", "國際駕照", "居留證", "錢包/鑰匙"],
+  checked: ["衣服", "內衣褲", "泳衣泳褲", "鞋子"],
+  carry: ["手機", "行動電源", "手機充電器", "萬用插頭", "自拍棒", "ESIM", "耳機", "iPad"],
+  toiletries: [
+    "洗面乳", "牙刷牙膏", "毛巾", "保養品", "隱形眼鏡/眼鏡", "防曬/防蚊液",
+    "衛生紙/濕紙巾", "衛生棉", "隨身藥品", "口罩", "刮鬍刀",
+  ],
+  other: ["保溫瓶", "筆", "行李秤", "塑膠袋", "雨傘"],
+};
+
+function defaultPackingItems() {
+  const items = [];
+  for (const [category, names] of Object.entries(DEFAULT_PACKING)) {
+    for (const name of names) {
+      items.push({ id: uid(), name, category, checked: false, createdAt: new Date().toISOString() });
+    }
+  }
+  return items;
+}
+
 let state = load();
 const listeners = new Set();
 
@@ -35,6 +59,12 @@ function normalizeTrip(trip) {
   if (!Array.isArray(trip.settlements)) trip.settlements = [];
   if (!Array.isArray(trip.notes)) trip.notes = [];
   if (!Array.isArray(trip.packing)) trip.packing = [];
+  // 舊旅程第一次看到打包清單功能時，若還沒動過（空清單）就補上預設項目；
+  // 已加過自己項目的不動，且只補這一次，避免使用者清空後又被重新塞回來
+  if (!trip.packingSeeded) {
+    if (trip.packing.length === 0) trip.packing = defaultPackingItems();
+    trip.packingSeeded = true;
+  }
   if (!trip.dayStarts || typeof trip.dayStarts !== "object") trip.dayStarts = {};
   trip.stops.forEach((s) => {
     if (!s.category) s.category = "sight";
@@ -93,7 +123,8 @@ export function createTrip({ name, startDate, endDate, memberNames }) {
     expenses: [],
     settlements: [], // 已還款紀錄 { id, fromId, toId, amount(home幣), createdAt }
     notes: [],       // 記事本卡片
-    packing: [],     // 打包清單 { id, name, category, checked, createdAt }
+    packing: defaultPackingItems(), // 打包清單 { id, name, category, checked, createdAt }
+    packingSeeded: true,
     dayStarts: {},   // { [dayIndex]: "HH:MM" } 每日出發時間
   };
   state.trips.push(trip);

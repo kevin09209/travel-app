@@ -33,7 +33,7 @@ const PACKING_CATS = {
   toiletries: { label: "盥洗保養", emoji: "🧴" },
   summer: { label: "夏日用品", emoji: "☀️" },
   winter: { label: "雪地用品", emoji: "❄️" },
-  other: { label: "其他", emoji: "📦" },
+  other: { label: "其他物品", emoji: "📦" },
 };
 
 const SYNC_STATUS_TEXT = {
