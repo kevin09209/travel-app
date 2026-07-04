@@ -38,6 +38,7 @@ function normalizeTrip(trip) {
   trip.stops.forEach((s) => {
     if (!s.category) s.category = "sight";
     if (typeof s.stayMin !== "number") s.stayMin = 60;
+    if (typeof s.travelMin !== "number") s.travelMin = 0;
   });
   trip.expenses.forEach((e) => {
     if (!e.category) e.category = "other";
@@ -151,6 +152,7 @@ export function addStop({ dayIndex, name, lat, lng }) {
     lng,
     category: "sight",
     stayMin: 60,
+    travelMin: 0,
     note: "",
   };
   trip.stops.push(stop);

@@ -77,6 +77,7 @@ let currentView = "itinerary";
 let currentDay = 0;
 let selectedExpCat = "food";
 let liveRate = null;
+const expandedNoteIds = new Set();
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -118,6 +119,12 @@ function effectiveRate(trip) {
 function bindTopbar() {
   $("#newTripBtn").addEventListener("click", openTripDialog);
   $("#emptyCreateBtn").addEventListener("click", openTripDialog);
+  $("#exportBtn").addEventListener("click", () => {
+    const trip = store.getActiveTrip();
+    if (!trip) return;
+    $("#printArea").replaceChildren(buildPrintReport(trip));
+    window.print();
+  });
   $("#tripSelect").addEventListener("change", (e) => {
     store.setActiveTrip(e.target.value);
     currentDay = 0;
@@ -304,7 +311,7 @@ function computeArrivals(trip, dayIndex, stops) {
   let cursor = h * 60 + m;
   return stops.map((s) => {
     const label = formatMinutes(cursor);
-    cursor += s.stayMin || 0;
+    cursor += (s.stayMin || 0) + (s.travelMin || 0);
     return label;
   });
 }
@@ -344,6 +351,7 @@ function renderItinerary(trip) {
   list.innerHTML = "";
   stops.forEach((stop, i) => {
     list.appendChild(stopCard(stop, i, stops.length, arrivals[i]));
+    if (i < stops.length - 1) list.appendChild(travelConnector(stop));
   });
   if (stops.length === 0) {
     const empty = document.createElement("li");
@@ -453,6 +461,26 @@ function stopCard(stop, index, total, arrival) {
     if (draggedId && draggedId !== stop.id) store.moveStop(draggedId, index);
   });
 
+  return li;
+}
+
+// 兩站之間的交通時間（連接線）
+function travelConnector(stop) {
+  const li = document.createElement("li");
+  li.className = "travelConnector";
+  const icon = document.createElement("span");
+  icon.textContent = "🚗";
+  const input = document.createElement("input");
+  input.type = "number";
+  input.min = "0";
+  input.step = "5";
+  input.value = stop.travelMin;
+  input.title = "到下一站的交通時間（分鐘）";
+  input.addEventListener("change", () => {
+    const v = Math.max(0, parseInt(input.value, 10) || 0);
+    store.updateStop(stop.id, { travelMin: v });
+  });
+  li.append(icon, input, document.createTextNode("分鐘車程"));
   return li;
 }
 
@@ -824,8 +852,21 @@ async function checkInviteLink(syncReady) {
 // ---------- 記事本 ----------
 function bindNotebook() {
   document.querySelectorAll(".noteAddBtn").forEach((btn) => {
-    btn.addEventListener("click", () => store.addNote(btn.dataset.type));
+    btn.addEventListener("click", () => {
+      const note = store.addNote(btn.dataset.type); // 這裡會同步觸發一次 render，當下還不知道要展開
+      if (!note) return;
+      expandedNoteIds.add(note.id); // 新增的卡片預設展開，方便直接填資料
+      const trip = store.getActiveTrip();
+      if (trip) renderNotebook(trip); // 補一次渲染讓卡片變展開狀態
+    });
   });
+}
+
+function toggleNoteExpand(noteId) {
+  if (expandedNoteIds.has(noteId)) expandedNoteIds.delete(noteId);
+  else expandedNoteIds.add(noteId);
+  const trip = store.getActiveTrip();
+  if (trip) renderNotebook(trip);
 }
 
 function renderNotebook(trip) {
@@ -836,35 +877,66 @@ function renderNotebook(trip) {
       "<div style='color:#8B8798;text-align:center;padding:24px'>把飯店訂房、機票、票券資訊都收進來，旅途中不用翻信箱 📮</div>";
     return;
   }
-  for (const note of trip.notes) {
-    list.appendChild(noteCard(note));
+  for (const type of Object.keys(NOTE_TYPES)) {
+    const notes = trip.notes.filter((n) => n.type === type);
+    if (notes.length === 0) continue;
+    list.appendChild(noteSection(type, notes));
   }
+}
+
+function noteSection(type, notes) {
+  const t = NOTE_TYPES[type];
+  const section = document.createElement("div");
+  section.className = "noteSection";
+  const h = document.createElement("h4");
+  h.className = "noteSectionTitle";
+  h.textContent = `${t.emoji} ${t.label}（${notes.length}）`;
+  section.appendChild(h);
+  for (const note of notes) section.appendChild(noteCard(note));
+  return section;
 }
 
 function noteCard(note) {
   const t = NOTE_TYPES[note.type] || NOTE_TYPES.memo;
+  const expanded = expandedNoteIds.has(note.id);
   const card = document.createElement("div");
-  card.className = `noteCard ${note.type}`;
+  card.className = `noteCard ${note.type}` + (expanded ? " expanded" : "");
 
+  // 卡頭：一開始只顯示這行，點擊展開/收合細項
   const head = document.createElement("div");
   head.className = "noteHead";
   const type = document.createElement("span");
   type.className = "noteType";
   type.textContent = t.emoji;
-  type.title = t.label;
-  const title = document.createElement("input");
-  title.className = "noteTitle";
-  title.placeholder = `${t.label}名稱…`;
-  title.value = note.title;
-  title.addEventListener("change", () => store.updateNote(note.id, { title: title.value }));
+  const title = document.createElement("span");
+  title.className = "noteHeadTitle";
+  title.textContent = note.title || `${t.label}未命名`;
+  if (!note.title) title.classList.add("placeholder");
+  const chevron = document.createElement("span");
+  chevron.className = "noteChevron";
+  chevron.textContent = expanded ? "▲" : "▼";
   const del = document.createElement("button");
   del.className = "noteDel";
   del.textContent = "✕";
-  del.addEventListener("click", () => {
+  del.addEventListener("click", (e) => {
+    e.stopPropagation();
     if (confirm(`刪除這張${t.label}卡片？`)) store.removeNote(note.id);
   });
-  head.append(type, title, del);
+  head.append(type, title, chevron, del);
+  head.addEventListener("click", () => toggleNoteExpand(note.id));
   card.appendChild(head);
+
+  if (!expanded) return card;
+
+  const details = document.createElement("div");
+  details.className = "noteDetails";
+
+  const titleInput = document.createElement("input");
+  titleInput.className = "noteTitle";
+  titleInput.placeholder = `${t.label}名稱…`;
+  titleInput.value = note.title;
+  titleInput.addEventListener("change", () => store.updateNote(note.id, { title: titleInput.value }));
+  details.appendChild(titleInput);
 
   if (t.fields.length > 0) {
     const grid = document.createElement("div");
@@ -881,7 +953,7 @@ function noteCard(note) {
       label.appendChild(input);
       grid.appendChild(label);
     }
-    card.appendChild(grid);
+    details.appendChild(grid);
   }
 
   const body = document.createElement("textarea");
@@ -889,7 +961,7 @@ function noteCard(note) {
   body.placeholder = "備註、注意事項…";
   body.value = note.body;
   body.addEventListener("change", () => store.updateNote(note.id, { body: body.value }));
-  card.appendChild(body);
+  details.appendChild(body);
 
   // 照片區
   const imgRow = document.createElement("div");
@@ -949,9 +1021,174 @@ function noteCard(note) {
     }
   });
   imgRow.append(addImg, fileInput);
-  card.appendChild(imgRow);
+  details.appendChild(imgRow);
 
+  card.appendChild(details);
   return card;
+}
+
+// ---------- 匯出 PDF（走瀏覽器列印，手機直接「儲存為 PDF」）----------
+function buildPrintReport(trip) {
+  const frag = document.createDocumentFragment();
+
+  const header = document.createElement("div");
+  header.className = "printHeader";
+  const h1 = document.createElement("h1");
+  h1.textContent = trip.name;
+  const meta = document.createElement("p");
+  meta.textContent =
+    `${trip.startDate.replaceAll("-", "/")} ~ ${trip.endDate.replaceAll("-", "/")}　` +
+    `成員：${trip.members.map((m) => m.name).join("、")}`;
+  header.append(h1, meta);
+  frag.appendChild(header);
+
+  const dayCount = store.tripDayCount(trip);
+  for (let i = 0; i < dayCount; i++) {
+    frag.appendChild(buildPrintDay(trip, i));
+  }
+  frag.appendChild(buildPrintExpenses(trip));
+  frag.appendChild(buildPrintNotes(trip));
+  return frag;
+}
+
+function buildPrintDay(trip, dayIndex) {
+  const stops = store.dayStops(dayIndex);
+  const arrivals = computeArrivals(trip, dayIndex, stops);
+  const day = document.createElement("section");
+  day.className = "printDay";
+  const h2 = document.createElement("h2");
+  h2.textContent = `Day ${dayIndex + 1}・${store.tripDayDate(trip, dayIndex)}（出發 ${store.getDayStart(trip, dayIndex)}）`;
+  day.appendChild(h2);
+
+  if (stops.length === 0) {
+    const p = document.createElement("p");
+    p.className = "mutedText";
+    p.textContent = "這天還沒有安排行程";
+    day.appendChild(p);
+    return day;
+  }
+
+  const ol = document.createElement("ol");
+  ol.className = "printStopList";
+  stops.forEach((s, idx) => {
+    const cat = STOP_CATS[s.category] || STOP_CATS.other;
+    const li = document.createElement("li");
+    const line = document.createElement("div");
+    line.className = "printStopLine";
+    line.textContent = `${arrivals[idx]}　${cat.emoji} ${s.name}（${cat.label}・停留 ${s.stayMin} 分）`;
+    li.appendChild(line);
+    if (s.note) {
+      const noteLine = document.createElement("div");
+      noteLine.className = "printStopNote";
+      noteLine.textContent = `備註：${s.note}`;
+      li.appendChild(noteLine);
+    }
+    if (idx < stops.length - 1 && s.travelMin > 0) {
+      const travel = document.createElement("div");
+      travel.className = "printTravel";
+      travel.textContent = `🚗 交通 ${s.travelMin} 分鐘 ↓`;
+      li.appendChild(travel);
+    }
+    ol.appendChild(li);
+  });
+  day.appendChild(ol);
+  return day;
+}
+
+function buildPrintExpenses(trip) {
+  const rate = effectiveRate(trip);
+  const nameOf = (id) => (trip.members.find((m) => m.id === id) || { name: "?" }).name;
+  const section = document.createElement("section");
+  section.className = "printExpenses";
+  section.appendChild(Object.assign(document.createElement("h2"), { textContent: "💰 分帳" }));
+
+  const stats = computeCategoryStats(trip, rate);
+  const totalP = document.createElement("p");
+  totalP.textContent =
+    `總支出：NT$${Math.round(stats.total).toLocaleString()}（每人平均 NT$` +
+    `${trip.members.length ? Math.round(stats.total / trip.members.length).toLocaleString() : 0}）`;
+  section.appendChild(totalP);
+
+  if (trip.expenses.length > 0) {
+    const ul = document.createElement("ul");
+    for (const exp of trip.expenses) {
+      const c = EXP_CATS[exp.category] || EXP_CATS.other;
+      const li = document.createElement("li");
+      li.textContent =
+        `${c.emoji} ${exp.desc}　${exp.currency === "JPY" ? "¥" : "NT$"}${exp.amount.toLocaleString()}　` +
+        `${nameOf(exp.payerId)} 付・分給 ${exp.splitIds.map(nameOf).join("、")}`;
+      ul.appendChild(li);
+    }
+    section.appendChild(ul);
+  }
+
+  section.appendChild(Object.assign(document.createElement("h3"), { textContent: "結算" }));
+  const balances = computeBalances(trip, rate);
+  const transfers = computeTransfers(balances);
+  if (transfers.length === 0) {
+    section.appendChild(
+      Object.assign(document.createElement("p"), { className: "mutedText", textContent: "目前不需要任何轉帳" })
+    );
+  } else {
+    const ul = document.createElement("ul");
+    for (const t of transfers) {
+      const li = document.createElement("li");
+      li.textContent = `${nameOf(t.fromId)} → ${nameOf(t.toId)}：NT$${t.amount.toFixed(0)}`;
+      ul.appendChild(li);
+    }
+    section.appendChild(ul);
+  }
+  return section;
+}
+
+function buildPrintNotes(trip) {
+  const section = document.createElement("section");
+  section.className = "printNotes";
+  section.appendChild(Object.assign(document.createElement("h2"), { textContent: "📔 資訊" }));
+
+  if (trip.notes.length === 0) {
+    section.appendChild(
+      Object.assign(document.createElement("p"), { className: "mutedText", textContent: "還沒有資訊卡片" })
+    );
+    return section;
+  }
+
+  for (const type of Object.keys(NOTE_TYPES)) {
+    const notes = trip.notes.filter((n) => n.type === type);
+    if (notes.length === 0) continue;
+    const t = NOTE_TYPES[type];
+    section.appendChild(
+      Object.assign(document.createElement("h3"), { textContent: `${t.emoji} ${t.label}` })
+    );
+    for (const note of notes) {
+      const card = document.createElement("div");
+      card.className = "printNoteCard";
+      card.appendChild(
+        Object.assign(document.createElement("div"), {
+          className: "printNoteTitle",
+          textContent: note.title || `（未命名${t.label}）`,
+        })
+      );
+      const fieldParts = t.fields
+        .map((f) => (note.fields[f.key] ? `${f.label}：${note.fields[f.key]}` : null))
+        .filter(Boolean);
+      if (fieldParts.length > 0) {
+        card.appendChild(
+          Object.assign(document.createElement("div"), {
+            className: "printNoteFields",
+            textContent: fieldParts.join("　"),
+          })
+        );
+      }
+      if (note.body) {
+        card.appendChild(
+          Object.assign(document.createElement("div"), { className: "printNoteBody", textContent: note.body })
+        );
+      }
+      section.appendChild(card);
+    }
+  }
+  return section;
 }
 
 // 客戶端壓縮：長邊縮到 1280px、JPEG 品質 0.8，避免流量與空間爆炸
