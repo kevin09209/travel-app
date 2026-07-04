@@ -1,5 +1,15 @@
 # LESSONS — 踩坑記錄（新的寫最上面，格式見 40-maintenance.md 第 3 節）
 
+## 2026-07-06（travel-app）GitHub Pages 部署間歇性失敗，重跑失敗 job 會撞 duplicate artifact
+- 情境：merge PR 後 deploy-pages.yml 自動部署，已兩次（PR #3、#6）遇到
+  `deploy-pages@v4` 回報「Deployment failed, try again later.」（GitHub 端暫時性錯誤，
+  上傳 artifact 都成功、程式碼沒問題）。
+- 坑：此時若按「Re-run failed jobs」，upload-pages-artifact 會再傳一份同名 artifact，
+  deploy-pages 看到兩份直接報錯 `Multiple artifacts named "github-pages"`——重跑必失敗。
+- 之後怎麼做：merge 後要確認部署 run 是 success，不能只看 merge 完成；失敗時用
+  `workflow_dispatch` 觸發**全新** run（`actions_run_trigger` method=run_workflow），
+  不要 rerun 舊 run。
+
 ## 2026-07-06（travel-app）CSS class 選擇器輸給全域 input[type=X] 選擇器
 - 情境：在 travel-app 專案給 `<input type="time">` 加 `.timePicker` class 想縮小寬度，
   結果手機上格子還是撐滿整排。
