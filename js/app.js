@@ -428,20 +428,7 @@ function stopCard(stop, index, total, arrival) {
   catSel.value = stop.category;
   catSel.addEventListener("change", () => store.updateStop(stop.id, { category: catSel.value }));
 
-  const stayWrap = document.createElement("span");
-  stayWrap.className = "stayWrap";
-  const stay = document.createElement("input");
-  stay.type = "number";
-  stay.min = "0";
-  stay.step = "5";
-  stay.value = stop.stayMin;
-  stay.title = "預計停留（分鐘）";
-  stay.addEventListener("change", () => {
-    const v = Math.max(0, parseInt(stay.value, 10) || 0);
-    store.updateStop(stop.id, { stayMin: v });
-  });
-  stayWrap.append(document.createTextNode("停留"), stay, document.createTextNode("分"));
-  meta.append(catSel, stayWrap);
+  meta.append(catSel, stayPicker(stop));
 
   const note = document.createElement("input");
   note.className = "stopNote";
@@ -484,6 +471,48 @@ function stopCard(stop, index, total, arrival) {
   });
 
   return li;
+}
+
+// 停留時間：時 + 分兩個下拉，方便手機操作（存回仍是總分鐘數）
+function stayPicker(stop) {
+  const wrap = document.createElement("span");
+  wrap.className = "stayWrap";
+
+  const total = Math.max(0, stop.stayMin || 0);
+  const hourSel = document.createElement("select");
+  for (let h = 0; h <= 12; h++) {
+    const opt = document.createElement("option");
+    opt.value = String(h);
+    opt.textContent = h;
+    hourSel.appendChild(opt);
+  }
+  const minSel = document.createElement("select");
+  for (let m = 0; m < 60; m += 5) {
+    const opt = document.createElement("option");
+    opt.value = String(m);
+    opt.textContent = String(m).padStart(2, "0");
+    minSel.appendChild(opt);
+  }
+  hourSel.value = String(Math.min(12, Math.floor(total / 60)));
+  minSel.value = String(Math.min(55, Math.round((total % 60) / 5) * 5));
+  hourSel.title = "停留時數";
+  minSel.title = "停留分鐘";
+
+  const save = () => {
+    const v = parseInt(hourSel.value, 10) * 60 + parseInt(minSel.value, 10);
+    store.updateStop(stop.id, { stayMin: v });
+  };
+  hourSel.addEventListener("change", save);
+  minSel.addEventListener("change", save);
+
+  wrap.append(
+    document.createTextNode("停留"),
+    hourSel,
+    document.createTextNode("時"),
+    minSel,
+    document.createTextNode("分")
+  );
+  return wrap;
 }
 
 // 兩站之間的交通時間（連接線）

@@ -309,7 +309,7 @@ input:focus, select:focus, textarea:focus {
 .stopMeta { display: flex; align-items: center; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
 .stopMeta select { width: auto; padding: 5px 8px; font-size: 13px; border-radius: 8px; }
 .stayWrap { display: flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 700; }
-.stayWrap input { width: 64px; padding: 5px 6px; font-size: 13px; border-radius: 8px; text-align: center; }
+.stayWrap select { width: auto; padding: 5px 6px; font-size: 13px; border-radius: 8px; }
 
 .stopNote {
   width: 100%;
@@ -545,9 +545,11 @@ input:focus, select:focus, textarea:focus {
 .noteDel { border: none; box-shadow: none; background: transparent; color: var(--danger); }
 .noteDel:hover { transform: scale(1.15); box-shadow: none; }
 
-.noteFields { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
-.noteFields label { font-size: 12px; color: var(--muted); font-weight: 700; display: block; }
-.noteFields input { margin-top: 2px; padding: 7px 8px; font-size: 13px; border-radius: 8px; }
+.noteFields { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; margin-bottom: 8px; }
+.noteFields label { font-size: 12px; color: var(--muted); font-weight: 700; display: block; min-width: 0; }
+.noteFields input { margin-top: 2px; padding: 7px 8px; font-size: 13px; border-radius: 8px; width: 100%; min-width: 0; max-width: 100%; }
+/* iOS/webkit 的 date input 有內建最小寬度會撐破格線，關掉原生外觀改用自家樣式 */
+.noteFields input[type="date"] { -webkit-appearance: none; appearance: none; }
 .noteBody {
   width: 100%;
   min-height: 52px;
@@ -612,7 +614,7 @@ dialog input { margin-top: 4px; }
 }
 
 @media (max-width: 480px) {
-  .noteFields { grid-template-columns: 1fr; }
+  .noteFields { grid-template-columns: minmax(0, 1fr); }
   #appTitle { font-size: 15px; }
 }
 
