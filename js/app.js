@@ -25,6 +25,17 @@ const EXP_CATS = {
   other: { label: "其他", emoji: "📦", color: "#8B8798" },
 };
 
+const PACKING_CATS = {
+  carry: { label: "隨身行李", emoji: "🎒" },
+  checked: { label: "託運行李", emoji: "🧳" },
+  docs: { label: "證件財物", emoji: "💳" },
+  electronics: { label: "電子 3C", emoji: "🔌" },
+  toiletries: { label: "盥洗保養", emoji: "🧴" },
+  summer: { label: "夏日用品", emoji: "☀️" },
+  winter: { label: "雪地用品", emoji: "❄️" },
+  other: { label: "其他", emoji: "📦" },
+};
+
 const SYNC_STATUS_TEXT = {
   local: "📴 尚未共享（資料只在這台裝置）",
   connecting: "🔄 連線中…",
@@ -87,6 +98,7 @@ bindTopbar();
 bindItinerary();
 bindExpenses();
 bindNotebook();
+bindPacking();
 bindSync();
 store.subscribe(render);
 render();
@@ -1066,6 +1078,107 @@ function noteCard(note) {
   return card;
 }
 
+// ---------- 打包清單 ----------
+function bindPacking() {
+  const catSel = $("#packCatSelect");
+  for (const [key, c] of Object.entries(PACKING_CATS)) {
+    const opt = document.createElement("option");
+    opt.value = key;
+    opt.textContent = `${c.emoji} ${c.label}`;
+    catSel.appendChild(opt);
+  }
+
+  const nameInput = $("#packNameInput");
+  const addItem = () => {
+    const result = store.addPackingItem({ name: nameInput.value, category: catSel.value });
+    const msg = $("#packMsg");
+    if (!result.ok) {
+      msg.textContent = result.error;
+      return;
+    }
+    msg.textContent = "";
+    nameInput.value = "";
+    nameInput.focus();
+  };
+  $("#packAddBtn").addEventListener("click", addItem);
+  nameInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      addItem();
+    }
+  });
+}
+
+function renderPacking(trip) {
+  const list = $("#packList");
+  list.innerHTML = "";
+  const progress = $("#packProgress");
+
+  if (trip.packing.length === 0) {
+    progress.textContent = "";
+    list.innerHTML =
+      "<div style='color:#8B8798;text-align:center;padding:24px'>把要帶的東西列出來，出發前一項項打勾 🧳</div>";
+    return;
+  }
+
+  const done = trip.packing.filter((p) => p.checked).length;
+  progress.textContent = `已收 ${done} / ${trip.packing.length}`;
+
+  for (const key of Object.keys(PACKING_CATS)) {
+    const items = trip.packing.filter((p) => p.category === key);
+    if (items.length === 0) continue;
+    list.appendChild(packSection(key, items));
+  }
+}
+
+function packSection(catKey, items) {
+  const cat = PACKING_CATS[catKey];
+  const section = document.createElement("div");
+  section.className = "packSection";
+  const done = items.filter((p) => p.checked).length;
+  const h = document.createElement("h4");
+  h.className = "packSectionTitle";
+  h.textContent = `${cat.emoji} ${cat.label}（${done}/${items.length}）`;
+  section.appendChild(h);
+
+  const ul = document.createElement("ul");
+  ul.className = "packItemList";
+  for (const item of items) ul.appendChild(packItemRow(item));
+  section.appendChild(ul);
+  return section;
+}
+
+function packItemRow(item) {
+  const li = document.createElement("li");
+  li.className = "packItem" + (item.checked ? " checked" : "");
+
+  const chk = document.createElement("input");
+  chk.type = "checkbox";
+  chk.checked = item.checked;
+  chk.title = "已收進行李";
+  chk.addEventListener("change", () => store.updatePackingItem(item.id, { checked: chk.checked }));
+
+  const name = document.createElement("input");
+  name.className = "packItemName";
+  name.value = item.name;
+  name.addEventListener("change", () => {
+    const v = name.value.trim();
+    if (!v) {
+      name.value = item.name; // 空白不允許，退回原值
+      return;
+    }
+    store.updatePackingItem(item.id, { name: v });
+  });
+
+  const del = document.createElement("button");
+  del.className = "packItemDel";
+  del.textContent = "✕";
+  del.addEventListener("click", () => store.removePackingItem(item.id));
+
+  li.append(chk, name, del);
+  return li;
+}
+
 // ---------- 匯出 PDF（走瀏覽器列印，手機直接「儲存為 PDF」）----------
 function buildPrintReport(trip) {
   const frag = document.createDocumentFragment();
@@ -1087,6 +1200,7 @@ function buildPrintReport(trip) {
   }
   frag.appendChild(buildPrintExpenses(trip));
   frag.appendChild(buildPrintNotes(trip));
+  frag.appendChild(buildPrintPacking(trip));
   return frag;
 }
 
@@ -1230,6 +1344,36 @@ function buildPrintNotes(trip) {
   return section;
 }
 
+function buildPrintPacking(trip) {
+  const section = document.createElement("section");
+  section.className = "printPacking";
+  section.appendChild(Object.assign(document.createElement("h2"), { textContent: "🧳 打包清單" }));
+
+  if (trip.packing.length === 0) {
+    section.appendChild(
+      Object.assign(document.createElement("p"), { className: "mutedText", textContent: "還沒有清單項目" })
+    );
+    return section;
+  }
+
+  for (const key of Object.keys(PACKING_CATS)) {
+    const items = trip.packing.filter((p) => p.category === key);
+    if (items.length === 0) continue;
+    const cat = PACKING_CATS[key];
+    section.appendChild(
+      Object.assign(document.createElement("h3"), { textContent: `${cat.emoji} ${cat.label}` })
+    );
+    const ul = document.createElement("ul");
+    for (const item of items) {
+      const li = document.createElement("li");
+      li.textContent = `${item.checked ? "☑" : "☐"} ${item.name}`;
+      ul.appendChild(li);
+    }
+    section.appendChild(ul);
+  }
+  return section;
+}
+
 // 客戶端壓縮：長邊縮到 1280px、JPEG 品質 0.8，避免流量與空間爆炸
 function compressImage(file, maxDim = 1280, quality = 0.8) {
   return new Promise((resolve, reject) => {
@@ -1276,6 +1420,7 @@ function render() {
   $("#itineraryView").classList.toggle("hidden", !hasTrip || currentView !== "itinerary");
   $("#expensesView").classList.toggle("hidden", !hasTrip || currentView !== "expenses");
   $("#notebookView").classList.toggle("hidden", !hasTrip || currentView !== "notebook");
+  $("#packingView").classList.toggle("hidden", !hasTrip || currentView !== "packing");
   document.querySelectorAll(".tab").forEach((tab) => {
     tab.classList.toggle("active", tab.dataset.view === currentView);
   });
@@ -1287,6 +1432,8 @@ function render() {
     requestAnimationFrame(() => mapView.refreshMapSize());
   } else if (currentView === "expenses") {
     renderExpenses(trip);
+  } else if (currentView === "packing") {
+    renderPacking(trip);
   } else {
     renderNotebook(trip);
   }

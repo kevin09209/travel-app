@@ -1,5 +1,14 @@
 # LESSONS — 踩坑記錄（新的寫最上面，格式見 40-maintenance.md 第 3 節）
 
+## 2026-07-06（travel-app）CSS class 選擇器輸給全域 input[type=X] 選擇器
+- 情境：在 travel-app 專案給 `<input type="time">` 加 `.timePicker` class 想縮小寬度，
+  結果手機上格子還是撐滿整排。
+- 坑：專案裡有一條全域 `input[type="time"] { width: 100%; ... }`（給一般表單用）。
+  `input[type="time"]`（元素+屬性）的特異性比純 class `.timePicker` 高，class 規則永遠輸，
+  跟宣告順序無關。
+- 之後怎麼做：要蓋過 `input[type=X]` 這類全域規則，選擇器至少要同時帶元素＋class
+  （如 `input.timePicker`）讓特異性打平，再靠宣告順序（寫在後面）取勝；純加 class 不夠。
+
 ## 2026-07-05 含中文的 .ps1 必須存成 UTF-8 with BOM
 - 情境：寫 tools/sync-github.ps1（含中文註解與字串）後用 powershell -File 執行。
 - 坑：Windows PowerShell 5.1 讀無 BOM 的 UTF-8 腳本會當成 ANSI，中文變亂碼並破壞語法

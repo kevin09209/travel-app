@@ -34,6 +34,7 @@ function load() {
 function normalizeTrip(trip) {
   if (!Array.isArray(trip.settlements)) trip.settlements = [];
   if (!Array.isArray(trip.notes)) trip.notes = [];
+  if (!Array.isArray(trip.packing)) trip.packing = [];
   if (!trip.dayStarts || typeof trip.dayStarts !== "object") trip.dayStarts = {};
   trip.stops.forEach((s) => {
     if (!s.category) s.category = "sight";
@@ -92,6 +93,7 @@ export function createTrip({ name, startDate, endDate, memberNames }) {
     expenses: [],
     settlements: [], // 已還款紀錄 { id, fromId, toId, amount(home幣), createdAt }
     notes: [],       // 記事本卡片
+    packing: [],     // 打包清單 { id, name, category, checked, createdAt }
     dayStarts: {},   // { [dayIndex]: "HH:MM" } 每日出發時間
   };
   state.trips.push(trip);
@@ -376,5 +378,38 @@ export function removeNote(noteId) {
   const trip = getActiveTrip();
   if (!trip) return;
   trip.notes = trip.notes.filter((n) => n.id !== noteId);
+  persist();
+}
+
+// ---------- 打包清單 ----------
+export function addPackingItem({ name, category }) {
+  const trip = getActiveTrip();
+  if (!trip) return { ok: false, error: "沒有旅程" };
+  const trimmed = (name || "").trim();
+  if (!trimmed) return { ok: false, error: "請輸入項目名稱" };
+  trip.packing.push({
+    id: uid(),
+    name: trimmed,
+    category: category || "other",
+    checked: false,
+    createdAt: new Date().toISOString(),
+  });
+  persist();
+  return { ok: true };
+}
+
+export function updatePackingItem(itemId, patch) {
+  const trip = getActiveTrip();
+  if (!trip) return;
+  const item = trip.packing.find((p) => p.id === itemId);
+  if (!item) return;
+  Object.assign(item, patch);
+  persist();
+}
+
+export function removePackingItem(itemId) {
+  const trip = getActiveTrip();
+  if (!trip) return;
+  trip.packing = trip.packing.filter((p) => p.id !== itemId);
   persist();
 }
