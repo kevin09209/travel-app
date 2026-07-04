@@ -1,3 +1,15 @@
+## 工作制度
+
+本專案沿用全域工作制度，正文入口在 [claude-system/INDEX.md](claude-system/INDEX.md)。
+
+非 trivial 任務（預估動 > 2 檔、> 5 輪工具呼叫、或含不可逆操作）開工前先讀該檔，並遵守其中鐵律。環境差異的說法：
+
+- 制度檔裡的 `D:\AI\...` 絕對路徑，在本專案一律改讀 `claude-system/` 下的同名檔。
+- auto-memory 是機器綁定的；雲端 session 沒有；跨 session 教訓改記 `claude-system/LESSONS.md`。
+- `claude-system/LESSONS.md` 可寫，其餘制度檔在本專案視為唯讀。
+- 制度檔的正式版本在本機。本專案內只是一個副本。
+- 若發現制度檔本身有錯，記進 `claude-system/LESSONS.md`，並在回報中提醒使用者回本機修正，不要直接在專案內改制度檔。
+
 # 旅遊小幫手 — 專案脈絡（給任何 Claude session）
 
 和旅伴即時共編的旅遊 PWA。線上網址 https://kevin09209.github.io/travel-app/ 。
