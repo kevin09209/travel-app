@@ -19,6 +19,7 @@
   <header id="topbar">
     <span id="appTitle">🧳 旅遊小幫手</span>
     <select id="tripSelect" title="切換旅程"></select>
+    <button id="exportBtn" title="匯出 PDF">📄</button>
     <button id="syncBtn" title="共享與同步">🔗</button>
     <button id="newTripBtn">＋新旅程</button>
   </header>
@@ -183,6 +184,9 @@
       </div>
     </form>
   </dialog>
+
+  <!-- 匯出 PDF：列印時只顯示這個區塊，內容由 app.js 動態產生 -->
+  <div id="printArea"></div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
           integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>

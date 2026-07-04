@@ -316,6 +316,25 @@ input:focus, select:focus, textarea:focus {
 .stopDel { color: var(--danger); }
 .dragHandle { cursor: grab; color: var(--muted); font-size: 18px; flex-shrink: 0; padding-top: 4px; touch-action: none; }
 
+.travelConnector {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: -4px 0 8px 34px;
+  padding: 4px 0 4px 16px;
+  border-left: 2px dashed var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+}
+.travelConnector input {
+  width: 56px;
+  padding: 4px 6px;
+  font-size: 13px;
+  border-radius: 8px;
+  text-align: center;
+}
+
 /* ---------- 分帳 ---------- */
 #memberChips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
 
@@ -447,22 +466,38 @@ input:focus, select:focus, textarea:focus {
 /* ---------- 記事本 ---------- */
 .noteAddBtn { font-size: 13px; padding: 7px 11px; }
 
+.noteSection { margin-bottom: 18px; }
+.noteSectionTitle {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--muted);
+  padding-left: 2px;
+}
+
 .noteCard {
   background: var(--card);
   border: 2px solid var(--ink);
   border-radius: 16px;
-  padding: 14px;
-  margin-bottom: 14px;
-  box-shadow: var(--shadow);
+  padding: 10px 14px;
+  margin-bottom: 10px;
+  box-shadow: var(--shadow-sm);
   border-left-width: 10px;
   animation: popIn 0.25s var(--pop);
 }
+
+.noteCard.expanded { padding: 14px; box-shadow: var(--shadow); }
 
 .noteCard.hotel { border-left-color: var(--yellow); }
 .noteCard.flight { border-left-color: var(--blue); }
 .noteCard.ticket { border-left-color: var(--coral); }
 .noteCard.transport { border-left-color: #C77DFF; }
 .noteCard.memo { border-left-color: var(--green); }
+
+.noteHeadTitle { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 800; font-size: 15px; }
+.noteHeadTitle.placeholder { color: var(--muted); font-weight: 700; }
+.noteChevron { color: var(--muted); font-size: 11px; flex-shrink: 0; }
+.noteDetails { margin-top: 10px; padding-top: 10px; border-top: 1px dashed #33323D44; }
 
 .noteImgs { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; align-items: center; }
 .noteImgWrap { position: relative; }
@@ -490,7 +525,7 @@ input:focus, select:focus, textarea:focus {
 }
 .noteImgAdd { font-size: 13px; padding: 6px 10px; }
 
-.noteHead { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.noteHead { display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; }
 .noteType { font-size: 20px; }
 .noteTitle { font-weight: 800; font-size: 15px; flex: 1; border: none; border-bottom: 2px dashed #33323D44; border-radius: 0; padding: 4px 2px; }
 .noteTitle:focus { box-shadow: none; border-bottom-color: var(--blue); }
@@ -566,4 +601,31 @@ dialog input { margin-top: 4px; }
 @media (max-width: 480px) {
   .noteFields { grid-template-columns: 1fr; }
   #appTitle { font-size: 15px; }
+}
+
+/* ---------- 匯出 PDF（列印樣式） ---------- */
+#printArea { display: none; }
+
+.printHeader h1 { margin: 0 0 4px; font-size: 22px; }
+.printHeader p { margin: 0 0 20px; color: var(--muted); font-size: 13px; }
+
+.printDay, .printExpenses, .printNotes { margin-bottom: 18px; break-inside: avoid; }
+.printDay h2, .printExpenses h2, .printNotes h2 { font-size: 16px; margin: 0 0 8px; border-bottom: 2px solid var(--ink); padding-bottom: 4px; }
+.printExpenses h3, .printNotes h3 { font-size: 14px; margin: 12px 0 6px; }
+
+.printStopList { margin: 0; padding-left: 20px; }
+.printStopList li { margin-bottom: 6px; font-size: 13px; }
+.printStopLine { font-weight: 700; }
+.printStopNote, .printTravel { color: var(--muted); font-size: 12px; margin-top: 2px; }
+
+.printExpenses ul, .printNotes ul { margin: 0 0 8px; padding-left: 20px; font-size: 13px; }
+.printExpenses li { margin-bottom: 4px; }
+
+.printNoteCard { margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px dashed #33323D44; font-size: 13px; }
+.printNoteTitle { font-weight: 700; }
+.printNoteFields, .printNoteBody { color: var(--muted); font-size: 12px; margin-top: 2px; white-space: pre-wrap; }
+
+@media print {
+  body > *:not(#printArea) { display: none !important; }
+  #printArea { display: block !important; background: #fff; color: #000; }
 }
