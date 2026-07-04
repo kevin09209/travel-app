@@ -90,7 +90,8 @@ bindSync();
 store.subscribe(render);
 render();
 refreshRate(false);
-sync.initSync(); // 背景連線，不擋首屏
+const syncReady = sync.initSync(); // 背景連線，不擋首屏
+checkInviteLink(syncReady);
 
 // PWA：註冊 service worker（localhost 與 https 才會生效）
 if ("serviceWorker" in navigator) {
@@ -744,6 +745,17 @@ function bindSync() {
     }
   });
 
+  $("#copyInviteMsgBtn").addEventListener("click", async () => {
+    const trip = store.getActiveTrip();
+    if (!trip || !trip.cloud) return;
+    try {
+      await navigator.clipboard.writeText(buildInviteMessage(trip));
+      setSyncMsg("已複製邀請訊息，貼給旅伴吧！", true);
+    } catch {
+      setSyncMsg("複製失敗，請手動選取", false);
+    }
+  });
+
   $("#joinBtn").addEventListener("click", async () => {
     const input = $("#joinCodeInput");
     setSyncMsg("加入中…", true);
@@ -772,6 +784,41 @@ function renderSyncDialog() {
   $("#shareUnlinked").classList.toggle("hidden", linked || !trip);
   $("#shareLinked").classList.toggle("hidden", !linked);
   if (linked) $("#inviteCode").textContent = trip.cloud.code;
+}
+
+function inviteLink(code) {
+  return `${location.origin}${location.pathname}?join=${code}`;
+}
+
+function buildInviteMessage(trip) {
+  const owner = trip.members[0] ? trip.members[0].name : "主揪人";
+  return (
+    `行程名稱：${trip.name}\n` +
+    `行程日期：${trip.startDate.replaceAll("-", "/")} ~ ${trip.endDate.replaceAll("-", "/")}\n` +
+    `主揪人 : ${owner}\n\n` +
+    `點擊下方連結，接受好友的邀請，一起來編輯 !\n${inviteLink(trip.cloud.code)}`
+  );
+}
+
+// 從邀請連結（?join=CODE）自動加入旅程
+async function checkInviteLink(syncReady) {
+  const code = new URLSearchParams(location.search).get("join");
+  if (!code) return;
+  history.replaceState(null, "", location.pathname + location.hash);
+  const dialog = $("#syncDialog");
+  renderSyncDialog();
+  setSyncMsg("偵測到邀請連結，加入中…", true);
+  dialog.showModal();
+  await syncReady;
+  const result = await sync.joinTrip(code);
+  if (result.ok) {
+    setSyncMsg(`已加入「${result.tripName}」！`, true);
+    currentDay = 0;
+    renderSyncDialog();
+    refreshRate(false);
+  } else {
+    setSyncMsg(result.error, false);
+  }
 }
 
 // ---------- 記事本 ----------
