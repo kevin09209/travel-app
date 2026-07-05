@@ -32,12 +32,16 @@ html, body {
 .hidden { display: none !important; }
 .mutedText { color: var(--muted); font-size: 12px; }
 
-/* ---------- 頂列＋分頁的 sticky 容器（往下滑縮小、往上滑展開）---------- */
+/* ---------- 頂列＋分頁的 sticky 容器（往下滑整排收起、往上滑展開）---------- */
 #stickyNav {
   position: sticky;
   top: 0;
   z-index: 1100;
+  background: var(--bg); /* 實色底，避免捲動時後面卡片內容從縫隙透出來 */
+  transition: transform 0.25s ease;
 }
+/* 往下滑：整個上排往上收走（不凍結在畫面上） */
+.nav-hidden #stickyNav { transform: translateY(-100%); }
 
 #topbar {
   display: flex;
@@ -46,26 +50,9 @@ html, body {
   padding: 12px 14px;
   background: var(--card);
   border-bottom: 2px solid var(--ink);
-  transition: padding 0.22s ease;
 }
 
 #appTitle { font-weight: 800; white-space: nowrap; font-size: 17px; }
-
-/* 可收合的文字（app 名稱、分頁名、＋新旅程）：縮小時收起只留 emoji */
-.navText {
-  display: inline-block;
-  overflow: hidden;
-  white-space: nowrap;
-  vertical-align: middle;
-  max-width: 8em;
-  transition: max-width 0.22s ease, opacity 0.18s ease;
-}
-.nav-min .navText { max-width: 0; opacity: 0; }
-
-/* 縮小態：頂列變扁、分頁變成 icon 列 */
-.nav-min #topbar { padding-top: 6px; padding-bottom: 6px; }
-.nav-min #tabs { padding-top: 6px; }
-.nav-min .tab { padding: 8px; font-size: 18px; }
 
 #tripSelect {
   flex: 1;
@@ -114,35 +101,35 @@ button:disabled {
 }
 
 /* ---------- 分頁 ---------- */
+/* 緊貼「旅遊小幫手」那排，中間不留縫（padding-top 0） */
 #tabs {
   display: flex;
   gap: 8px;
   background: transparent;
-  padding: 10px 14px 0;
+  padding: 8px 14px 0;
   max-width: 748px;
   margin: 0 auto;
 }
 
 .tab {
   flex: 1;
-  border-radius: 14px 14px 0 0;
-  border-bottom: none;
+  border-radius: 0 0 14px 14px;
+  border-top: none;
   background: #F4E9DC;
   color: var(--muted);
   padding: 11px;
   font-size: 15px;
   box-shadow: none;
-  transition: padding 0.15s ease, font-size 0.15s ease;
 }
 
-.tab:hover { transform: translateY(-2px); box-shadow: none; }
+.tab:hover { transform: translateY(2px); box-shadow: none; }
 .tab:active { transform: translateY(0); }
 
 .tab.active {
   background: var(--card);
   color: var(--coral);
   font-weight: 800;
-  box-shadow: 0 -3px 0 var(--coral) inset;
+  box-shadow: 0 3px 0 var(--coral) inset; /* 指示線改在下緣，配合下垂式分頁 */
 }
 
 #main { padding: 14px; max-width: 748px; margin: 0 auto; }
@@ -352,18 +339,50 @@ input:focus, select:focus, textarea:focus {
 /* 時長下拉（停留、車程共用）：寬度隨內容、不撐滿，顯示由我們控制、每台裝置一致 */
 .durationSelect { width: auto; flex-shrink: 0; padding: 5px 8px; font-size: 13px; border-radius: 8px; }
 
+/* 備註列：欄位 + 展開/收合 icon */
+.noteRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px dashed #33323D44;
+}
 .stopNote {
+  flex: 1;
+  min-width: 0;
   width: 100%;
   border: none;
-  border-top: 1px dashed #33323D44;
-  margin-top: 8px;
-  padding: 6px 0 0;
+  padding: 0;
   font-size: 13px;
+  font-family: inherit;
   color: var(--muted);
   background: transparent;
   outline: none;
   border-radius: 0;
+  /* 收合（單行 input）時過長顯示省略號，提示還有內容 */
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
 }
+.stopNote.expanded {
+  white-space: pre-wrap;
+  overflow: hidden;
+  resize: none;
+  line-height: 1.5;
+  min-height: 40px;
+}
+.noteToggle {
+  flex-shrink: 0;
+  border: none;
+  box-shadow: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  padding: 0 4px;
+  line-height: 1.4;
+}
+.noteToggle:hover { transform: none; box-shadow: none; color: var(--coral); }
 
 .stopBtns { display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
 .stopBtns button { padding: 2px 9px; font-size: 13px; border-radius: 8px; box-shadow: var(--shadow-sm); }
