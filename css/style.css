@@ -234,7 +234,7 @@ input:focus, select:focus, textarea:focus {
 #searchBox { display: flex; gap: 10px; margin-top: 2px; }
 #placeInput { flex: 1; box-shadow: var(--shadow-sm); }
 
-#searchResults {
+#searchResults, .searchResults {
   list-style: none;
   margin: 8px 0 0;
   padding: 0;
@@ -245,7 +245,7 @@ input:focus, select:focus, textarea:focus {
   box-shadow: var(--shadow);
 }
 
-#searchResults li {
+#searchResults li, .searchResults li {
   padding: 10px 12px;
   border-bottom: 1px dashed #33323D44;
   cursor: pointer;
@@ -253,9 +253,9 @@ input:focus, select:focus, textarea:focus {
   transition: background 0.15s;
 }
 
-#searchResults li:last-child { border-bottom: none; }
-#searchResults li:hover { background: var(--coral-soft); }
-#searchResults li .sub { color: var(--muted); font-size: 12px; display: block; }
+#searchResults li:last-child, .searchResults li:last-child { border-bottom: none; }
+#searchResults li:hover, .searchResults li:hover { background: var(--coral-soft); }
+#searchResults li .sub, .searchResults li .sub { color: var(--muted); font-size: 12px; display: block; }
 
 #stopList { list-style: none; margin: 14px 0 0; padding: 0; }
 
@@ -373,14 +373,14 @@ input.timePicker { width: 108px; flex-shrink: 0; padding: 5px 8px; font-size: 13
 }
 .companionChip.active { background: var(--blue-soft); border-color: var(--blue); color: #0B6BB8; }
 
-/* 「改成分組」按鈕 */
+/* 「改成分組」小按鈕：放在同行列右側，省版面 */
 .splitToggleBtn {
-  margin-top: 10px;
-  width: 100%;
+  margin-left: auto;
+  flex-shrink: 0;
   font-size: 12px;
   font-weight: 700;
-  padding: 7px 10px;
-  border-radius: 10px;
+  padding: 4px 10px;
+  border-radius: 999px;
   border-style: dashed;
   color: var(--coral);
   background: var(--coral-soft);
@@ -419,7 +419,10 @@ input.timePicker { width: 108px; flex-shrink: 0; padding: 5px 8px; font-size: 13
 .groupPlace { flex: 1; min-width: 0; font-size: 13px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .groupChev { color: var(--muted); font-size: 10px; flex-shrink: 0; }
 .groupDetail { padding: 2px 11px 12px; border-top: 1px dashed #33323D22; }
-.groupPlaceInput { margin-top: 8px; font-size: 13px; padding: 7px 9px; border-radius: 8px; }
+.groupCurrentPlace { margin-top: 8px; font-size: 13px; font-weight: 700; }
+.groupSearchRow { display: flex; gap: 8px; margin-top: 8px; }
+.groupSearchInput { flex: 1; min-width: 0; font-size: 13px; padding: 7px 9px; border-radius: 8px; }
+.groupSearchBtn { flex-shrink: 0; font-size: 13px; padding: 7px 14px; border-radius: 8px; }
 .groupChipsLabel { font-size: 12px; font-weight: 700; color: var(--muted); margin: 8px 0 4px; }
 .companionChips { display: flex; flex-wrap: wrap; gap: 6px; }
 .groupActions { display: flex; gap: 8px; margin-top: 10px; }

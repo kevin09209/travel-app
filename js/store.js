@@ -243,7 +243,7 @@ function findStop(stopId) {
 }
 
 function newGroup(name = "", memberIds = []) {
-  return { id: uid(), name, memberIds: [...memberIds], note: "" };
+  return { id: uid(), name, memberIds: [...memberIds], note: "", lat: null, lng: null };
 }
 
 // 把一般景點改成分組時段：保留原地點為第 1 組，再加一個空組讓使用者填。
