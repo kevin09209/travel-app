@@ -71,6 +71,11 @@ function normalizeTrip(trip) {
     if (typeof s.stayMin !== "number") s.stayMin = 60;
     if (typeof s.travelMin !== "number") s.travelMin = 0;
     if (!Array.isArray(s.memberIds)) s.memberIds = []; // 同行旅伴；空＝全員一起
+    if (!Array.isArray(s.groups)) s.groups = []; // 分組時段的子項目；空＝一般景點
+    s.groups.forEach((g) => {
+      if (!Array.isArray(g.memberIds)) g.memberIds = [];
+      if (typeof g.note !== "string") g.note = "";
+    });
   });
   trip.expenses.forEach((e) => {
     if (!e.category) e.category = "other";
@@ -188,6 +193,7 @@ export function addStop({ dayIndex, name, lat, lng }) {
     stayMin: 60,
     travelMin: 0,
     memberIds: [], // 同行旅伴；空＝全員一起
+    groups: [],    // 分組時段的子項目 { id, name, memberIds, note }；空＝一般景點
     note: "",
   };
   trip.stops.push(stop);
@@ -226,6 +232,78 @@ export function removeStop(stopId) {
   if (!stop) return;
   trip.stops = trip.stops.filter((s) => s.id !== stopId);
   reindexDay(trip, stop.dayIndex);
+  persist();
+}
+
+// ---------- 分組時段（同一時段、不同人去不同地方）----------
+function findStop(stopId) {
+  const trip = getActiveTrip();
+  if (!trip) return null;
+  return trip.stops.find((s) => s.id === stopId) || null;
+}
+
+function newGroup(name = "", memberIds = []) {
+  return { id: uid(), name, memberIds: [...memberIds], note: "" };
+}
+
+// 把一般景點改成分組時段：保留原地點為第 1 組，再加一個空組讓使用者填。
+// 回傳新加的空組 id（供 UI 預設展開它）。
+export function convertStopToGroups(stopId) {
+  const stop = findStop(stopId);
+  if (!stop || (stop.groups && stop.groups.length)) return null;
+  const empty = newGroup();
+  stop.groups = [newGroup(stop.name, stop.memberIds), empty];
+  persist();
+  return empty.id;
+}
+
+// 加一個空組，回傳其 id（供 UI 預設展開它）
+export function addStopGroup(stopId) {
+  const stop = findStop(stopId);
+  if (!stop) return null;
+  if (!Array.isArray(stop.groups)) stop.groups = [];
+  const g = newGroup();
+  stop.groups.push(g);
+  persist();
+  return g.id;
+}
+
+export function updateStopGroup(stopId, groupId, patch) {
+  const stop = findStop(stopId);
+  if (!stop) return;
+  const g = (stop.groups || []).find((x) => x.id === groupId);
+  if (!g) return;
+  Object.assign(g, patch);
+  persist();
+}
+
+export function toggleStopGroupMember(stopId, groupId, memberId) {
+  const stop = findStop(stopId);
+  if (!stop) return;
+  const g = (stop.groups || []).find((x) => x.id === groupId);
+  if (!g) return;
+  if (!Array.isArray(g.memberIds)) g.memberIds = [];
+  if (g.memberIds.includes(memberId)) {
+    g.memberIds = g.memberIds.filter((id) => id !== memberId);
+  } else {
+    g.memberIds.push(memberId);
+  }
+  persist();
+}
+
+// 刪除一組；剩下 ≤1 組時自動收回成一般景點（把最後一組的地點寫回 stop）
+export function removeStopGroup(stopId, groupId) {
+  const stop = findStop(stopId);
+  if (!stop) return;
+  stop.groups = (stop.groups || []).filter((g) => g.id !== groupId);
+  if (stop.groups.length <= 1) {
+    const last = stop.groups[0];
+    if (last) {
+      if (last.name) stop.name = last.name;
+      stop.memberIds = last.memberIds;
+    }
+    stop.groups = [];
+  }
   persist();
 }
 
