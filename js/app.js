@@ -91,6 +91,7 @@ let selectedExpCat = "food";
 let liveRate = null;
 const expandedNoteIds = new Set();
 const expandedGroupIds = new Set(); // 分組時段中展開的子項目 id
+const expandedNotes = new Set(); // 展開（多行顯示）的備註欄 key
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -130,16 +131,16 @@ function effectiveRate(trip) {
   return 0.2;
 }
 
-// 往下滑縮小頂列＋分頁、往上滑（或接近頂端）展開
+// 往下滑把頂列＋分頁整排收走、往上滑（或接近頂端）再展開
 function bindScrollNav() {
   const root = document.documentElement;
   let lastY = window.scrollY;
   let ticking = false;
   const update = () => {
     const y = window.scrollY;
-    if (y < 12) root.classList.remove("nav-min");
-    else if (y > lastY + 6) root.classList.add("nav-min"); // 往下滑
-    else if (y < lastY - 6) root.classList.remove("nav-min"); // 往上滑
+    if (y < 60) root.classList.remove("nav-hidden"); // 靠近頂端一定顯示
+    else if (y > lastY + 6) root.classList.add("nav-hidden"); // 往下滑→收走
+    else if (y < lastY - 6) root.classList.remove("nav-hidden"); // 往上滑→展開
     lastY = y;
     ticking = false;
   };
@@ -581,11 +582,7 @@ function normalStopBody(stop, trip) {
   meta.className = "stopMeta";
   meta.append(categorySelect(stop), stayPicker(stop));
 
-  const note = document.createElement("input");
-  note.className = "stopNote";
-  note.placeholder = "備註…";
-  note.value = stop.note;
-  note.addEventListener("change", () => store.updateStop(stop.id, { note: note.value }));
+  const note = expandableNote(stop.id, stop.note, (v) => store.updateStop(stop.id, { note: v }));
   body.append(nameRow, meta, note);
 
   // 同行旅伴 +（右側）「改成分組」小按鈕。只有一位成員時不顯示
@@ -737,12 +734,9 @@ function groupRow(stop, g, trip) {
   );
   detail.append(chipsLabel, chips);
 
-  const note = document.createElement("input");
-  note.className = "stopNote";
-  note.placeholder = "備註…";
-  note.value = g.note || "";
-  note.addEventListener("change", () => store.updateStopGroup(stop.id, g.id, { note: note.value }));
-  detail.appendChild(note);
+  detail.appendChild(
+    expandableNote("g:" + g.id, g.note, (v) => store.updateStopGroup(stop.id, g.id, { note: v }))
+  );
 
   const actions = document.createElement("div");
   actions.className = "groupActions";
@@ -804,6 +798,45 @@ function companionRow(stop, trip) {
   row.appendChild(label);
 
   row.appendChild(buildMemberChips(trip, ids, (mid) => store.toggleStopMember(stop.id, mid)));
+  return row;
+}
+
+// 可展開／收合的備註欄：收合時單行（過長會被截斷），點右側 icon 展開成多行看全部。
+// key 用來記住展開狀態（stop 用 stop.id、分組用 "g:"+group.id）。
+function expandableNote(key, value, onChange) {
+  const row = document.createElement("div");
+  row.className = "noteRow";
+  const expanded = expandedNotes.has(key);
+  const val = value || "";
+
+  const field = document.createElement(expanded ? "textarea" : "input");
+  field.className = "stopNote" + (expanded ? " expanded" : "");
+  field.placeholder = "備註…";
+  field.value = val;
+  field.addEventListener("change", () => onChange(field.value));
+  if (expanded) {
+    const grow = () => {
+      field.style.height = "auto";
+      field.style.height = field.scrollHeight + "px";
+    };
+    field.addEventListener("input", grow);
+    requestAnimationFrame(grow); // 進 DOM 後才量得到 scrollHeight
+  }
+  row.appendChild(field);
+
+  // 只有「有內容」或「已展開」才顯示展開鈕，避免空備註也長一顆 icon
+  if (val.trim() || expanded) {
+    const toggle = document.createElement("button");
+    toggle.className = "noteToggle";
+    toggle.textContent = expanded ? "▴" : "▾";
+    toggle.title = expanded ? "收合備註" : "展開看完整備註";
+    toggle.addEventListener("click", () => {
+      if (expandedNotes.has(key)) expandedNotes.delete(key);
+      else expandedNotes.add(key);
+      render();
+    });
+    row.appendChild(toggle);
+  }
   return row;
 }
 
