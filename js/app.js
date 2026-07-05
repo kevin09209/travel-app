@@ -245,52 +245,48 @@ async function reverseGeocode(lat, lng) {
   }
 }
 
-async function addFromGoogleMaps(gm) {
-  const resultsEl = $("#searchResults");
-  if (gm.short) {
-    resultsEl.innerHTML =
-      "<li>這是 Google Maps 短網址，瀏覽器無法直接解析 😅<br>" +
-      "<span class='sub'>請先在瀏覽器打開它，再複製網址列的完整網址（含地名）貼過來</span></li>";
-    resultsEl.classList.remove("hidden");
-    return;
-  }
-  if (gm.lat != null && gm.lng != null) {
-    resultsEl.innerHTML = "<li>解析網址中…</li>";
-    resultsEl.classList.remove("hidden");
-    const name = gm.name || (await reverseGeocode(gm.lat, gm.lng)) || "地圖標記地點";
-    store.addStop({ dayIndex: currentDay, name, lat: gm.lat, lng: gm.lng });
-    resultsEl.classList.add("hidden");
-    $("#placeInput").value = "";
-    return;
-  }
-  if (gm.name) {
-    // 網址裡只有名稱沒座標 → 改用名稱搜尋
-    $("#placeInput").value = gm.name;
-    await searchPlace();
-    return;
-  }
-  resultsEl.innerHTML = "<li>看不懂這個地圖網址，請確認是地點頁面的網址</li>";
-  resultsEl.classList.remove("hidden");
-}
-
-async function searchPlace() {
-  const q = $("#placeInput").value.trim();
-  const resultsEl = $("#searchResults");
+// 共用的地點搜尋核心：支援 Nominatim 關鍵字與 Google Maps 網址解析。
+// 結果渲染到 resultsEl；使用者點選時呼叫 onPick({ name, lat, lng })。
+async function runPlaceSearch(query, resultsEl, onPick) {
+  const q = (query || "").trim();
   if (!q) return;
+  const show = (html) => {
+    resultsEl.innerHTML = html;
+    resultsEl.classList.remove("hidden");
+  };
+
   const gm = parseGoogleMapsUrl(q);
   if (gm) {
-    await addFromGoogleMaps(gm);
+    if (gm.short) {
+      show(
+        "<li>這是 Google Maps 短網址，瀏覽器無法直接解析 😅<br>" +
+          "<span class='sub'>請先在瀏覽器打開它，再複製網址列的完整網址（含地名）貼過來</span></li>"
+      );
+      return;
+    }
+    if (gm.lat != null && gm.lng != null) {
+      show("<li>解析網址中…</li>");
+      const name = gm.name || (await reverseGeocode(gm.lat, gm.lng)) || "地圖標記地點";
+      onPick({ name, lat: gm.lat, lng: gm.lng });
+      resultsEl.classList.add("hidden");
+      return;
+    }
+    if (gm.name) {
+      await runPlaceSearch(gm.name, resultsEl, onPick); // 只有名稱→改用名稱搜尋
+      return;
+    }
+    show("<li>看不懂這個地圖網址，請確認是地點頁面的網址</li>");
     return;
   }
-  resultsEl.innerHTML = "<li>搜尋中…</li>";
-  resultsEl.classList.remove("hidden");
+
+  show("<li>搜尋中…</li>");
   try {
     const url = `${NOMINATIM_API}?format=jsonv2&limit=5&accept-language=zh-TW&q=${encodeURIComponent(q)}`;
     const res = await fetch(url);
     if (!res.ok) throw new Error("HTTP " + res.status);
     const places = await res.json();
     if (places.length === 0) {
-      resultsEl.innerHTML = "<li>找不到這個地點，換個關鍵字試試</li>";
+      show("<li>找不到這個地點，換個關鍵字試試</li>");
       return;
     }
     resultsEl.innerHTML = "";
@@ -303,21 +299,24 @@ async function searchPlace() {
       sub.textContent = p.display_name;
       li.append(title, sub);
       li.addEventListener("click", () => {
-        store.addStop({
-          dayIndex: currentDay,
-          name: title.textContent,
-          lat: parseFloat(p.lat),
-          lng: parseFloat(p.lon),
-        });
+        onPick({ name: title.textContent, lat: parseFloat(p.lat), lng: parseFloat(p.lon) });
         resultsEl.classList.add("hidden");
-        $("#placeInput").value = "";
       });
       resultsEl.appendChild(li);
     }
+    resultsEl.classList.remove("hidden");
   } catch (e) {
-    resultsEl.innerHTML = "<li>搜尋失敗（網路或服務暫時異常），稍後再試</li>";
+    show("<li>搜尋失敗（網路或服務暫時異常），稍後再試</li>");
     console.warn(e);
   }
+}
+
+// 頂部搜尋列：搜到就把地點加成當天的新景點
+async function searchPlace() {
+  await runPlaceSearch($("#placeInput").value, $("#searchResults"), ({ name, lat, lng }) => {
+    store.addStop({ dayIndex: currentDay, name, lat, lng });
+    $("#placeInput").value = "";
+  });
 }
 
 // 依出發時間與各站停留分鐘，回傳每站的抵達時間字串
@@ -444,6 +443,24 @@ function googleMapsNavUrl(stop) {
   return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(dest)}`;
 }
 
+// 開外部連結：用 <a target="_blank"> 而非 window.open。
+// 在 standalone PWA（加到主畫面）裡，window.open 常會「原地」把 app 的
+// webview 換成該網址，導致回到 app 時停在空白頁；錨點會交給系統瀏覽器／
+// 地圖 app 開，PWA 自己的畫面（行程分頁）保持不動。
+function openExternal(url) {
+  const a = document.createElement("a");
+  a.href = url;
+  a.target = "_blank";
+  a.rel = "noopener noreferrer";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
+
+function openNav(stop) {
+  openExternal(googleMapsNavUrl(stop));
+}
+
 function stopCard(stop, index, total, arrival, trip, filtering) {
   const cat = STOP_CATS[stop.category] || STOP_CATS.other;
   const isSplit = stop.groups && stop.groups.length > 0;
@@ -527,7 +544,7 @@ function normalStopBody(stop, trip) {
   navBtn.title = "在 Google Maps 導航";
   navBtn.addEventListener("click", (e) => {
     e.stopPropagation();
-    window.open(googleMapsNavUrl(stop), "_blank", "noopener");
+    openNav(stop);
   });
 
   const nameRow = document.createElement("div");
@@ -545,18 +562,20 @@ function normalStopBody(stop, trip) {
   note.addEventListener("change", () => store.updateStop(stop.id, { note: note.value }));
   body.append(nameRow, meta, note);
 
-  // 同行旅伴 + 「改成分組」。只有一位成員時不顯示（無分開行動的意義）
+  // 同行旅伴 +（右側）「改成分組」小按鈕。只有一位成員時不顯示
   if (trip.members.length >= 2) {
-    body.appendChild(companionRow(stop, trip));
+    const cRow = companionRow(stop, trip);
     const splitBtn = document.createElement("button");
     splitBtn.className = "splitToggleBtn";
-    splitBtn.textContent = "🍽️ 改成分組（大家去不同地方）";
+    splitBtn.textContent = "🍽️ 分組";
+    splitBtn.title = "改成分組：大家去不同地方，之後同一時間集合";
     splitBtn.addEventListener("click", () => {
       const newId = store.convertStopToGroups(stop.id);
       if (newId) expandedGroupIds.add(newId); // 新的空組預設展開好填寫
       render();
     });
-    body.appendChild(splitBtn);
+    cRow.appendChild(splitBtn);
+    body.appendChild(cRow);
   }
   return body;
 }
@@ -647,12 +666,40 @@ function groupRow(stop, g, trip) {
   const detail = document.createElement("div");
   detail.className = "groupDetail";
 
-  const placeInput = document.createElement("input");
-  placeInput.className = "groupPlaceInput";
-  placeInput.placeholder = "地點／餐廳名稱…";
-  placeInput.value = g.name;
-  placeInput.addEventListener("change", () => store.updateStopGroup(stop.id, g.id, { name: placeInput.value.trim() }));
-  detail.appendChild(placeInput);
+  // 目前已選的地點（若已選）
+  if (g.name) {
+    const cur = document.createElement("div");
+    cur.className = "groupCurrentPlace";
+    cur.textContent = "📍 " + g.name;
+    detail.appendChild(cur);
+  }
+
+  // 地點搜尋：跟頂部搜尋列同一套（Nominatim + Google Maps 網址），選到就記座標
+  const searchRow = document.createElement("div");
+  searchRow.className = "groupSearchRow";
+  const searchInput = document.createElement("input");
+  searchInput.type = "search";
+  searchInput.className = "groupSearchInput";
+  searchInput.placeholder = g.name ? "換地點…" : "搜尋地點，或貼 Google Maps 網址";
+  const results = document.createElement("ul");
+  results.className = "searchResults hidden";
+  const doSearch = () =>
+    runPlaceSearch(searchInput.value, results, ({ name, lat, lng }) => {
+      store.updateStopGroup(stop.id, g.id, { name, lat, lng });
+      searchInput.value = "";
+    });
+  const searchBtn = document.createElement("button");
+  searchBtn.className = "primary groupSearchBtn";
+  searchBtn.textContent = "搜尋";
+  searchBtn.addEventListener("click", doSearch);
+  searchInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      doSearch();
+    }
+  });
+  searchRow.append(searchInput, searchBtn);
+  detail.append(searchRow, results);
 
   const chipsLabel = document.createElement("div");
   chipsLabel.className = "groupChipsLabel";
@@ -677,7 +724,7 @@ function groupRow(stop, g, trip) {
   nav.className = "minibtn";
   nav.textContent = "🧭 導航";
   nav.disabled = !g.name;
-  nav.addEventListener("click", () => window.open(googleMapsNavUrl({ name: g.name }), "_blank", "noopener"));
+  nav.addEventListener("click", () => openNav({ name: g.name, lat: g.lat, lng: g.lng }));
   const rm = document.createElement("button");
   rm.className = "groupDelBtn";
   rm.textContent = "✕ 刪除這組";
@@ -746,6 +793,17 @@ function timeStrToMin(str) {
   return h * 60 + m;
 }
 
+// 綁定 time picker：只在使用者「關掉滾輪」後（blur）才寫回，不用 change。
+// iOS 滾動時每動一格就會發 change，若當下 updateStop→重繪，會把還開著的
+// 滾輪彈掉、看起來像「還沒按完成就自己設定了」。改用 blur 就等使用者選定。
+function bindTimePicker(inp, getCurrentMin, commit) {
+  inp.addEventListener("blur", () => {
+    if (!inp.value) return;
+    const v = timeStrToMin(inp.value);
+    if (v !== getCurrentMin()) commit(v);
+  });
+}
+
 // 停留時間：原生 time picker，左時右分、分鐘 5 分一階（存回仍是總分鐘數）
 function stayPicker(stop) {
   const wrap = document.createElement("span");
@@ -756,10 +814,7 @@ function stayPicker(stop) {
   inp.className = "timePicker";
   inp.value = minToTimeStr(stop.stayMin || 0);
   inp.title = "預計停留時間（時:分）";
-  inp.addEventListener("change", () => {
-    if (!inp.value) return;
-    store.updateStop(stop.id, { stayMin: timeStrToMin(inp.value) });
-  });
+  bindTimePicker(inp, () => stop.stayMin || 0, (v) => store.updateStop(stop.id, { stayMin: v }));
   wrap.append(document.createTextNode("停留"), inp);
   return wrap;
 }
@@ -776,10 +831,7 @@ function travelConnector(stop) {
   input.className = "timePicker";
   input.value = minToTimeStr(stop.travelMin || 0);
   input.title = "到下一站的交通時間（時:分）";
-  input.addEventListener("change", () => {
-    if (!input.value) return;
-    store.updateStop(stop.id, { travelMin: timeStrToMin(input.value) });
-  });
+  bindTimePicker(input, () => stop.travelMin || 0, (v) => store.updateStop(stop.id, { travelMin: v }));
   li.append(icon, document.createTextNode("車程"), input);
   return li;
 }
