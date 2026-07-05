@@ -70,6 +70,7 @@ function normalizeTrip(trip) {
     if (!s.category) s.category = "sight";
     if (typeof s.stayMin !== "number") s.stayMin = 60;
     if (typeof s.travelMin !== "number") s.travelMin = 0;
+    if (!Array.isArray(s.memberIds)) s.memberIds = []; // 同行旅伴；空＝全員一起
   });
   trip.expenses.forEach((e) => {
     if (!e.category) e.category = "other";
@@ -186,6 +187,7 @@ export function addStop({ dayIndex, name, lat, lng }) {
     category: "sight",
     stayMin: 60,
     travelMin: 0,
+    memberIds: [], // 同行旅伴；空＝全員一起
     note: "",
   };
   trip.stops.push(stop);
@@ -199,6 +201,21 @@ export function updateStop(stopId, patch) {
   const stop = trip.stops.find((s) => s.id === stopId);
   if (!stop) return;
   Object.assign(stop, patch);
+  persist();
+}
+
+// 切換某景點的同行旅伴（有就移除、沒有就加入）
+export function toggleStopMember(stopId, memberId) {
+  const trip = getActiveTrip();
+  if (!trip) return;
+  const stop = trip.stops.find((s) => s.id === stopId);
+  if (!stop) return;
+  if (!Array.isArray(stop.memberIds)) stop.memberIds = [];
+  if (stop.memberIds.includes(memberId)) {
+    stop.memberIds = stop.memberIds.filter((id) => id !== memberId);
+  } else {
+    stop.memberIds.push(memberId);
+  }
   persist();
 }
 

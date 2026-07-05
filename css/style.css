@@ -199,6 +199,27 @@ input:focus, select:focus, textarea:focus {
   transform: rotate(-2deg) scale(1.06);
 }
 
+/* 旅伴篩選列 */
+#memberFilter {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 2px 2px 12px;
+  margin-top: 2px;
+}
+.filterChip {
+  flex-shrink: 0;
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 13px;
+  background: var(--card);
+}
+.filterChip.active {
+  background: var(--coral);
+  color: #fff;
+  border-color: var(--ink);
+}
+
 #map {
   height: 300px;
   border-radius: 16px;
@@ -331,6 +352,26 @@ input.timePicker { width: 108px; flex-shrink: 0; padding: 5px 8px; font-size: 13
 .stopBtns button { padding: 2px 9px; font-size: 13px; border-radius: 8px; box-shadow: var(--shadow-sm); }
 .stopDel { color: var(--danger); }
 .dragHandle { cursor: grab; color: var(--muted); font-size: 18px; flex-shrink: 0; padding-top: 4px; touch-action: none; }
+
+/* 同行旅伴選擇列 */
+.companionRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed #33323D44;
+}
+.companionLabel { font-size: 12px; font-weight: 700; color: var(--muted); flex-shrink: 0; }
+.companionChip {
+  padding: 3px 10px;
+  font-size: 12px;
+  border-radius: 999px;
+  background: var(--card);
+  box-shadow: none;
+}
+.companionChip.active { background: var(--blue-soft); border-color: var(--blue); color: #0B6BB8; }
 
 .travelConnector {
   display: flex;

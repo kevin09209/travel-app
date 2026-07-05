@@ -86,6 +86,7 @@ const NOTE_TYPES = {
 // ---------- 畫面狀態（不需持久化） ----------
 let currentView = "itinerary";
 let currentDay = 0;
+let currentMemberFilter = null; // null＝全部；否則為某位旅伴的 member id
 let selectedExpCat = "food";
 let liveRate = null;
 const expandedNoteIds = new Set();
@@ -140,6 +141,7 @@ function bindTopbar() {
   $("#tripSelect").addEventListener("change", (e) => {
     store.setActiveTrip(e.target.value);
     currentDay = 0;
+    currentMemberFilter = null; // 不同旅程成員不同，切換時重置篩選
     refreshRate(false);
   });
   document.querySelectorAll(".tab").forEach((tab) => {
@@ -169,6 +171,7 @@ function bindTopbar() {
       memberNames: $("#tripMembers").value.split(/[,，]/),
     });
     currentDay = 0;
+    currentMemberFilter = null;
     refreshRate(false);
   });
 
@@ -357,22 +360,71 @@ function renderItinerary(trip) {
     dayStartInput.value = store.getDayStart(trip, currentDay);
   }
 
-  const stops = store.dayStops(currentDay);
+  renderMemberFilter(trip);
+
+  // 篩選中時關掉拖曳/上下移：filtered 子集重排會對不上全天 order，容易錯亂
+  const filtering = currentMemberFilter !== null;
+  const allStops = store.dayStops(currentDay);
+  const stops = filtering
+    ? allStops.filter((s) => stopMatchesMember(s, currentMemberFilter))
+    : allStops;
   const arrivals = computeArrivals(trip, currentDay, stops);
   const list = $("#stopList");
   list.innerHTML = "";
   stops.forEach((stop, i) => {
-    list.appendChild(stopCard(stop, i, stops.length, arrivals[i]));
+    list.appendChild(stopCard(stop, i, stops.length, arrivals[i], trip, filtering));
     if (i < stops.length - 1) list.appendChild(travelConnector(stop));
   });
   if (stops.length === 0) {
     const empty = document.createElement("li");
     empty.style.cssText = "color:#8B8798;text-align:center;padding:18px;list-style:none;";
-    empty.textContent = "這天還沒有行程，搜尋地點加入吧 🔍";
+    empty.textContent = filtering
+      ? "這位旅伴這天沒有安排的行程 🧳"
+      : "這天還沒有行程，搜尋地點加入吧 🔍";
     list.appendChild(empty);
   }
 
   mapView.renderDay(stops, STOP_CATS);
+}
+
+// 景點是否屬於某位旅伴：空 memberIds＝全員一起，永遠算符合
+function stopMatchesMember(stop, memberId) {
+  const ids = stop.memberIds || [];
+  return ids.length === 0 || ids.includes(memberId);
+}
+
+// 行程頁上方的旅伴篩選列：全部＋各旅伴，單選
+function renderMemberFilter(trip) {
+  const bar = $("#memberFilter");
+  // 只有一位成員時沒有「分開行動」的意義，直接隱藏篩選列
+  if (trip.members.length < 2) {
+    bar.classList.add("hidden");
+    bar.innerHTML = "";
+    currentMemberFilter = null;
+    return;
+  }
+  // 篩選對象若已不在成員名單（被刪除），退回全部
+  if (currentMemberFilter && !trip.members.some((m) => m.id === currentMemberFilter)) {
+    currentMemberFilter = null;
+  }
+  bar.classList.remove("hidden");
+  bar.innerHTML = "";
+
+  const makeChip = (label, value) => {
+    const chip = document.createElement("button");
+    chip.className = "filterChip" + (currentMemberFilter === value ? " active" : "");
+    chip.textContent = label;
+    chip.addEventListener("click", () => {
+      currentMemberFilter = value;
+      render();
+    });
+    return chip;
+  };
+
+  bar.appendChild(makeChip("👥 全部", null));
+  for (const m of trip.members) {
+    bar.appendChild(makeChip(m.name, m.id));
+  }
 }
 
 // 產生 Google Maps 導航網址：有座標就用座標，沒有就退回用地點名稱搜尋
@@ -384,11 +436,11 @@ function googleMapsNavUrl(stop) {
   return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(dest)}`;
 }
 
-function stopCard(stop, index, total, arrival) {
+function stopCard(stop, index, total, arrival, trip, filtering) {
   const cat = STOP_CATS[stop.category] || STOP_CATS.other;
   const li = document.createElement("li");
   li.className = "stopCard";
-  li.draggable = true;
+  li.draggable = !filtering; // 篩選中禁止拖曳排序
   li.dataset.stopId = stop.id;
 
   const handle = document.createElement("span");
@@ -449,15 +501,20 @@ function stopCard(stop, index, total, arrival) {
   note.addEventListener("change", () => store.updateStop(stop.id, { note: note.value }));
   body.append(nameRow, meta, note);
 
+  // 同行旅伴（多選 toggle；全不選＝全員）。只有一位成員時不顯示
+  if (trip.members.length >= 2) {
+    body.appendChild(companionRow(stop, trip));
+  }
+
   const btns = document.createElement("div");
   btns.className = "stopBtns";
   const up = document.createElement("button");
   up.textContent = "↑";
-  up.disabled = index === 0;
+  up.disabled = index === 0 || filtering;
   up.addEventListener("click", () => store.moveStop(stop.id, index - 1));
   const down = document.createElement("button");
   down.textContent = "↓";
-  down.disabled = index === total - 1;
+  down.disabled = index === total - 1 || filtering;
   down.addEventListener("click", () => store.moveStop(stop.id, index + 1));
   const del = document.createElement("button");
   del.className = "stopDel";
@@ -469,20 +526,43 @@ function stopCard(stop, index, total, arrival) {
 
   li.append(handle, left, body, btns);
 
-  li.addEventListener("dragstart", (e) => {
-    li.classList.add("dragging");
-    e.dataTransfer.setData("text/plain", stop.id);
-    e.dataTransfer.effectAllowed = "move";
-  });
-  li.addEventListener("dragend", () => li.classList.remove("dragging"));
-  li.addEventListener("dragover", (e) => e.preventDefault());
-  li.addEventListener("drop", (e) => {
-    e.preventDefault();
-    const draggedId = e.dataTransfer.getData("text/plain");
-    if (draggedId && draggedId !== stop.id) store.moveStop(draggedId, index);
-  });
+  if (!filtering) {
+    li.addEventListener("dragstart", (e) => {
+      li.classList.add("dragging");
+      e.dataTransfer.setData("text/plain", stop.id);
+      e.dataTransfer.effectAllowed = "move";
+    });
+    li.addEventListener("dragend", () => li.classList.remove("dragging"));
+    li.addEventListener("dragover", (e) => e.preventDefault());
+    li.addEventListener("drop", (e) => {
+      e.preventDefault();
+      const draggedId = e.dataTransfer.getData("text/plain");
+      if (draggedId && draggedId !== stop.id) store.moveStop(draggedId, index);
+    });
+  }
 
   return li;
+}
+
+// 同行旅伴選擇列：每位成員一個 toggle chip；全不選＝全員一起
+function companionRow(stop, trip) {
+  const row = document.createElement("div");
+  row.className = "companionRow";
+  const ids = stop.memberIds || [];
+
+  const label = document.createElement("span");
+  label.className = "companionLabel";
+  label.textContent = ids.length === 0 ? "🧑‍🤝‍🧑 全員" : "🧑‍🤝‍🧑 同行";
+  row.appendChild(label);
+
+  for (const m of trip.members) {
+    const chip = document.createElement("button");
+    chip.className = "companionChip" + (ids.includes(m.id) ? " active" : "");
+    chip.textContent = m.name;
+    chip.addEventListener("click", () => store.toggleStopMember(stop.id, m.id));
+    row.appendChild(chip);
+  }
+  return row;
 }
 
 // 總分鐘數 <-> "HH:MM" 字串（給 <input type="time"> 用；手機上是左時右分的滾輪）
@@ -843,6 +923,7 @@ function bindSync() {
       setSyncMsg(`已加入「${result.tripName}」！`, true);
       input.value = "";
       currentDay = 0;
+      currentMemberFilter = null;
       renderSyncDialog();
       refreshRate(false);
     } else {
