@@ -90,6 +90,7 @@ let currentMemberFilter = null; // null＝全部；否則為某位旅伴的 memb
 let selectedExpCat = "food";
 let liveRate = null;
 const expandedNoteIds = new Set();
+const expandedGroupIds = new Set(); // 分組時段中展開的子項目 id
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -387,8 +388,15 @@ function renderItinerary(trip) {
   mapView.renderDay(stops, STOP_CATS);
 }
 
-// 景點是否屬於某位旅伴：空 memberIds＝全員一起，永遠算符合
+// 景點是否屬於某位旅伴：空 memberIds＝全員一起，永遠算符合。
+// 分組時段：任一組的 memberIds 為空(全員)或含此旅伴就算符合。
 function stopMatchesMember(stop, memberId) {
+  if (stop.groups && stop.groups.length) {
+    return stop.groups.some((g) => {
+      const ids = g.memberIds || [];
+      return ids.length === 0 || ids.includes(memberId);
+    });
+  }
   const ids = stop.memberIds || [];
   return ids.length === 0 || ids.includes(memberId);
 }
@@ -438,8 +446,9 @@ function googleMapsNavUrl(stop) {
 
 function stopCard(stop, index, total, arrival, trip, filtering) {
   const cat = STOP_CATS[stop.category] || STOP_CATS.other;
+  const isSplit = stop.groups && stop.groups.length > 0;
   const li = document.createElement("li");
-  li.className = "stopCard";
+  li.className = "stopCard" + (isSplit ? " splitCard" : "");
   li.draggable = !filtering; // 篩選中禁止拖曳排序
   li.dataset.stopId = stop.id;
 
@@ -459,52 +468,7 @@ function stopCard(stop, index, total, arrival, trip, filtering) {
   arrive.title = "預計抵達時間（自動推算）";
   left.append(order, arrive);
 
-  const body = document.createElement("div");
-  body.className = "stopBody";
-  const name = document.createElement("div");
-  name.className = "stopName";
-  name.textContent = `${cat.emoji} ${stop.name}`;
-  name.title = stop.name;
-  name.addEventListener("click", () => mapView.panTo(stop.lat, stop.lng));
-
-  const navBtn = document.createElement("button");
-  navBtn.className = "stopNavBtn";
-  navBtn.textContent = "🧭";
-  navBtn.title = "在 Google Maps 導航";
-  navBtn.addEventListener("click", (e) => {
-    e.stopPropagation();
-    window.open(googleMapsNavUrl(stop), "_blank", "noopener");
-  });
-
-  const nameRow = document.createElement("div");
-  nameRow.className = "stopNameRow";
-  nameRow.append(name, navBtn);
-
-  const meta = document.createElement("div");
-  meta.className = "stopMeta";
-  const catSel = document.createElement("select");
-  for (const [key, c] of Object.entries(STOP_CATS)) {
-    const opt = document.createElement("option");
-    opt.value = key;
-    opt.textContent = `${c.emoji} ${c.label}`;
-    catSel.appendChild(opt);
-  }
-  catSel.value = stop.category;
-  catSel.addEventListener("change", () => store.updateStop(stop.id, { category: catSel.value }));
-
-  meta.append(catSel, stayPicker(stop));
-
-  const note = document.createElement("input");
-  note.className = "stopNote";
-  note.placeholder = "備註…";
-  note.value = stop.note;
-  note.addEventListener("change", () => store.updateStop(stop.id, { note: note.value }));
-  body.append(nameRow, meta, note);
-
-  // 同行旅伴（多選 toggle；全不選＝全員）。只有一位成員時不顯示
-  if (trip.members.length >= 2) {
-    body.appendChild(companionRow(stop, trip));
-  }
+  const body = isSplit ? splitStopBody(stop, trip, filtering) : normalStopBody(stop, trip);
 
   const btns = document.createElement("div");
   btns.className = "stopBtns";
@@ -520,7 +484,8 @@ function stopCard(stop, index, total, arrival, trip, filtering) {
   del.className = "stopDel";
   del.textContent = "✕";
   del.addEventListener("click", () => {
-    if (confirm(`刪除「${stop.name}」？`)) store.removeStop(stop.id);
+    const label = isSplit ? "這個分組時段" : `「${stop.name}」`;
+    if (confirm(`刪除${label}？`)) store.removeStop(stop.id);
   });
   btns.append(up, down, del);
 
@@ -544,6 +509,216 @@ function stopCard(stop, index, total, arrival, trip, filtering) {
   return li;
 }
 
+// 一般景點的卡片內容
+function normalStopBody(stop, trip) {
+  const cat = STOP_CATS[stop.category] || STOP_CATS.other;
+  const body = document.createElement("div");
+  body.className = "stopBody";
+
+  const name = document.createElement("div");
+  name.className = "stopName";
+  name.textContent = `${cat.emoji} ${stop.name}`;
+  name.title = stop.name;
+  name.addEventListener("click", () => mapView.panTo(stop.lat, stop.lng));
+
+  const navBtn = document.createElement("button");
+  navBtn.className = "stopNavBtn";
+  navBtn.textContent = "🧭";
+  navBtn.title = "在 Google Maps 導航";
+  navBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    window.open(googleMapsNavUrl(stop), "_blank", "noopener");
+  });
+
+  const nameRow = document.createElement("div");
+  nameRow.className = "stopNameRow";
+  nameRow.append(name, navBtn);
+
+  const meta = document.createElement("div");
+  meta.className = "stopMeta";
+  meta.append(categorySelect(stop), stayPicker(stop));
+
+  const note = document.createElement("input");
+  note.className = "stopNote";
+  note.placeholder = "備註…";
+  note.value = stop.note;
+  note.addEventListener("change", () => store.updateStop(stop.id, { note: note.value }));
+  body.append(nameRow, meta, note);
+
+  // 同行旅伴 + 「改成分組」。只有一位成員時不顯示（無分開行動的意義）
+  if (trip.members.length >= 2) {
+    body.appendChild(companionRow(stop, trip));
+    const splitBtn = document.createElement("button");
+    splitBtn.className = "splitToggleBtn";
+    splitBtn.textContent = "🍽️ 改成分組（大家去不同地方）";
+    splitBtn.addEventListener("click", () => {
+      const newId = store.convertStopToGroups(stop.id);
+      if (newId) expandedGroupIds.add(newId); // 新的空組預設展開好填寫
+      render();
+    });
+    body.appendChild(splitBtn);
+  }
+  return body;
+}
+
+// 分組時段的卡片內容（手風琴：每組收合成「人名＋地點」一行，點擊展開）
+function splitStopBody(stop, trip, filtering) {
+  const cat = STOP_CATS[stop.category] || STOP_CATS.other;
+  // 篩選某位旅伴時，這張卡只顯示含該旅伴（或未指定成員）的組
+  const shownGroups =
+    currentMemberFilter === null
+      ? stop.groups
+      : stop.groups.filter((g) => {
+          const ids = g.memberIds || [];
+          return ids.length === 0 || ids.includes(currentMemberFilter);
+        });
+  const body = document.createElement("div");
+  body.className = "stopBody";
+
+  const titleRow = document.createElement("div");
+  titleRow.className = "slotTitleRow";
+  const title = document.createElement("input");
+  title.className = "slotTitleInput";
+  title.value = stop.name;
+  title.placeholder = "時段名稱（例：午餐）";
+  title.addEventListener("change", () => store.updateStop(stop.id, { name: title.value.trim() || "分組時段" }));
+  const badge = document.createElement("span");
+  badge.className = "splitBadge";
+  badge.textContent = filtering
+    ? `${cat.emoji} 分組 · 篩選中`
+    : `${cat.emoji} 分組 · ${stop.groups.length} 組`;
+  titleRow.append(title, badge);
+
+  const meta = document.createElement("div");
+  meta.className = "stopMeta";
+  meta.append(categorySelect(stop), stayPicker(stop));
+
+  body.append(titleRow, meta);
+
+  const list = document.createElement("div");
+  list.className = "groupList";
+  shownGroups.forEach((g) => list.appendChild(groupRow(stop, g, trip)));
+  body.appendChild(list);
+
+  // 篩選中不顯示「加一組」（跟拖曳排序一樣，編輯留給「全部」檢視）
+  if (!filtering) {
+    const addBtn = document.createElement("button");
+    addBtn.className = "addGroupBtn";
+    addBtn.textContent = "＋ 加一組";
+    addBtn.addEventListener("click", () => {
+      const newId = store.addStopGroup(stop.id);
+      if (newId) expandedGroupIds.add(newId);
+      render();
+    });
+    body.appendChild(addBtn);
+  }
+
+  return body;
+}
+
+// 分組時段裡的一組：收合＝「人名＋地點」，展開＝地點/同行/備註/導航/刪除
+function groupRow(stop, g, trip) {
+  const nameOf = (id) => (trip.members.find((m) => m.id === id) || { name: "?" }).name;
+  const expanded = expandedGroupIds.has(g.id); // 展開狀態只看這個集合，編輯地點不會害它收合
+  const row = document.createElement("div");
+  row.className = "groupRow" + (expanded ? " open" : "");
+
+  const head = document.createElement("div");
+  head.className = "groupHead";
+  const who = document.createElement("span");
+  who.className = "groupWho";
+  who.textContent = g.memberIds && g.memberIds.length ? g.memberIds.map(nameOf).join("、") : "（未指定）";
+  const place = document.createElement("span");
+  place.className = "groupPlace";
+  place.textContent = g.name || "新的一組…";
+  const chev = document.createElement("span");
+  chev.className = "groupChev";
+  chev.textContent = expanded ? "▲" : "▼";
+  head.append(who, place, chev);
+  head.addEventListener("click", () => {
+    if (expandedGroupIds.has(g.id)) expandedGroupIds.delete(g.id);
+    else expandedGroupIds.add(g.id);
+    render();
+  });
+  row.appendChild(head);
+
+  if (!expanded) return row;
+
+  const detail = document.createElement("div");
+  detail.className = "groupDetail";
+
+  const placeInput = document.createElement("input");
+  placeInput.className = "groupPlaceInput";
+  placeInput.placeholder = "地點／餐廳名稱…";
+  placeInput.value = g.name;
+  placeInput.addEventListener("change", () => store.updateStopGroup(stop.id, g.id, { name: placeInput.value.trim() }));
+  detail.appendChild(placeInput);
+
+  const chipsLabel = document.createElement("div");
+  chipsLabel.className = "groupChipsLabel";
+  chipsLabel.textContent = "誰去這裡：";
+  const chips = document.createElement("div");
+  chips.className = "companionChips";
+  chips.appendChild(
+    buildMemberChips(trip, g.memberIds || [], (mid) => store.toggleStopGroupMember(stop.id, g.id, mid))
+  );
+  detail.append(chipsLabel, chips);
+
+  const note = document.createElement("input");
+  note.className = "stopNote";
+  note.placeholder = "備註…";
+  note.value = g.note || "";
+  note.addEventListener("change", () => store.updateStopGroup(stop.id, g.id, { note: note.value }));
+  detail.appendChild(note);
+
+  const actions = document.createElement("div");
+  actions.className = "groupActions";
+  const nav = document.createElement("button");
+  nav.className = "minibtn";
+  nav.textContent = "🧭 導航";
+  nav.disabled = !g.name;
+  nav.addEventListener("click", () => window.open(googleMapsNavUrl({ name: g.name }), "_blank", "noopener"));
+  const rm = document.createElement("button");
+  rm.className = "groupDelBtn";
+  rm.textContent = "✕ 刪除這組";
+  rm.addEventListener("click", () => {
+    expandedGroupIds.delete(g.id);
+    store.removeStopGroup(stop.id, g.id);
+  });
+  actions.append(nav, rm);
+  detail.appendChild(actions);
+
+  row.appendChild(detail);
+  return row;
+}
+
+// 類別下拉（一般景點與分組時段共用）
+function categorySelect(stop) {
+  const catSel = document.createElement("select");
+  for (const [key, c] of Object.entries(STOP_CATS)) {
+    const opt = document.createElement("option");
+    opt.value = key;
+    opt.textContent = `${c.emoji} ${c.label}`;
+    catSel.appendChild(opt);
+  }
+  catSel.value = stop.category;
+  catSel.addEventListener("change", () => store.updateStop(stop.id, { category: catSel.value }));
+  return catSel;
+}
+
+// 產生一排旅伴 toggle chips（回傳 fragment）。ids＝目前選中的成員 id
+function buildMemberChips(trip, ids, onToggle) {
+  const frag = document.createDocumentFragment();
+  for (const m of trip.members) {
+    const chip = document.createElement("button");
+    chip.className = "companionChip" + (ids.includes(m.id) ? " active" : "");
+    chip.textContent = m.name;
+    chip.addEventListener("click", () => onToggle(m.id));
+    frag.appendChild(chip);
+  }
+  return frag;
+}
+
 // 同行旅伴選擇列：每位成員一個 toggle chip；全不選＝全員一起
 function companionRow(stop, trip) {
   const row = document.createElement("div");
@@ -555,13 +730,7 @@ function companionRow(stop, trip) {
   label.textContent = ids.length === 0 ? "🧑‍🤝‍🧑 全員" : "🧑‍🤝‍🧑 同行";
   row.appendChild(label);
 
-  for (const m of trip.members) {
-    const chip = document.createElement("button");
-    chip.className = "companionChip" + (ids.includes(m.id) ? " active" : "");
-    chip.textContent = m.name;
-    chip.addEventListener("click", () => store.toggleStopMember(stop.id, m.id));
-    row.appendChild(chip);
-  }
+  row.appendChild(buildMemberChips(trip, ids, (mid) => store.toggleStopMember(stop.id, mid)));
   return row;
 }
 
@@ -1302,6 +1471,7 @@ function buildPrintDay(trip, dayIndex) {
     return day;
   }
 
+  const nameOf = (id) => (trip.members.find((m) => m.id === id) || { name: "?" }).name;
   const ol = document.createElement("ol");
   ol.className = "printStopList";
   stops.forEach((s, idx) => {
@@ -1309,8 +1479,20 @@ function buildPrintDay(trip, dayIndex) {
     const li = document.createElement("li");
     const line = document.createElement("div");
     line.className = "printStopLine";
-    line.textContent = `${arrivals[idx]}　${cat.emoji} ${s.name}（${cat.label}・停留 ${s.stayMin} 分）`;
+    const isSplit = s.groups && s.groups.length > 0;
+    line.textContent = isSplit
+      ? `${arrivals[idx]}　${cat.emoji} ${s.name}（分組・停留 ${s.stayMin} 分）`
+      : `${arrivals[idx]}　${cat.emoji} ${s.name}（${cat.label}・停留 ${s.stayMin} 分）`;
     li.appendChild(line);
+    if (isSplit) {
+      for (const g of s.groups) {
+        const who = g.memberIds && g.memberIds.length ? g.memberIds.map(nameOf).join("、") : "未指定";
+        const gLine = document.createElement("div");
+        gLine.className = "printStopNote";
+        gLine.textContent = `· ${who}：${g.name || "（未填地點）"}${g.note ? "（" + g.note + "）" : ""}`;
+        li.appendChild(gLine);
+      }
+    }
     if (s.note) {
       const noteLine = document.createElement("div");
       noteLine.className = "printStopNote";

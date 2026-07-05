@@ -373,6 +373,71 @@ input.timePicker { width: 108px; flex-shrink: 0; padding: 5px 8px; font-size: 13
 }
 .companionChip.active { background: var(--blue-soft); border-color: var(--blue); color: #0B6BB8; }
 
+/* 「改成分組」按鈕 */
+.splitToggleBtn {
+  margin-top: 10px;
+  width: 100%;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 7px 10px;
+  border-radius: 10px;
+  border-style: dashed;
+  color: var(--coral);
+  background: var(--coral-soft);
+  box-shadow: none;
+}
+
+/* ---------- 分組時段卡 ---------- */
+.slotTitleRow { display: flex; align-items: center; gap: 8px; }
+.slotTitleInput {
+  flex: 1; min-width: 0;
+  font-weight: 800; font-size: 15px;
+  border: none; border-bottom: 2px dashed #33323D44; border-radius: 0;
+  padding: 4px 2px;
+}
+.slotTitleInput:focus { box-shadow: none; border-bottom-color: var(--blue); }
+.splitBadge {
+  flex-shrink: 0;
+  font-size: 10.5px; font-weight: 800; padding: 2px 8px; border-radius: 999px;
+  background: var(--coral-soft); color: #B4402F; border: 1.5px solid var(--coral);
+}
+
+.groupList {
+  margin-top: 10px;
+  border: 2px solid var(--ink);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.groupRow { border-top: 1.5px dashed #33323D33; }
+.groupRow:first-child { border-top: none; }
+.groupHead {
+  display: flex; align-items: center; gap: 8px;
+  padding: 9px 11px; cursor: pointer; user-select: none;
+}
+.groupHead:hover { background: var(--bg); }
+.groupWho { font-size: 12px; font-weight: 800; color: var(--blue); flex-shrink: 0; max-width: 40%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.groupPlace { flex: 1; min-width: 0; font-size: 13px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.groupChev { color: var(--muted); font-size: 10px; flex-shrink: 0; }
+.groupDetail { padding: 2px 11px 12px; border-top: 1px dashed #33323D22; }
+.groupPlaceInput { margin-top: 8px; font-size: 13px; padding: 7px 9px; border-radius: 8px; }
+.groupChipsLabel { font-size: 12px; font-weight: 700; color: var(--muted); margin: 8px 0 4px; }
+.companionChips { display: flex; flex-wrap: wrap; gap: 6px; }
+.groupActions { display: flex; gap: 8px; margin-top: 10px; }
+.minibtn {
+  font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 8px;
+  background: var(--blue-soft); border-color: var(--blue); color: #0B6BB8;
+}
+.groupDelBtn {
+  font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 8px;
+  color: var(--danger); background: var(--card); border-color: var(--danger);
+  box-shadow: none; margin-left: auto;
+}
+.addGroupBtn {
+  margin-top: 10px; width: 100%;
+  font-size: 12.5px; font-weight: 800; padding: 8px 10px; border-radius: 10px;
+  border-style: dashed; color: var(--blue); background: var(--blue-soft); box-shadow: none;
+}
+
 .travelConnector {
   display: flex;
   align-items: center;
