@@ -102,6 +102,7 @@ bindExpenses();
 bindNotebook();
 bindPacking();
 bindSync();
+bindScrollNav();
 store.subscribe(render);
 render();
 refreshRate(false);
@@ -127,6 +128,31 @@ function effectiveRate(trip) {
   if (trip.manualRate) return trip.manualRate;
   if (liveRate) return liveRate.rate;
   return 0.2;
+}
+
+// 往下滑縮小頂列＋分頁、往上滑（或接近頂端）展開
+function bindScrollNav() {
+  const root = document.documentElement;
+  let lastY = window.scrollY;
+  let ticking = false;
+  const update = () => {
+    const y = window.scrollY;
+    if (y < 12) root.classList.remove("nav-min");
+    else if (y > lastY + 6) root.classList.add("nav-min"); // 往下滑
+    else if (y < lastY - 6) root.classList.remove("nav-min"); // 往上滑
+    lastY = y;
+    ticking = false;
+  };
+  window.addEventListener(
+    "scroll",
+    () => {
+      if (!ticking) {
+        requestAnimationFrame(update);
+        ticking = true;
+      }
+    },
+    { passive: true }
+  );
 }
 
 // ---------- 頂列與分頁 ----------
@@ -781,58 +807,58 @@ function companionRow(stop, trip) {
   return row;
 }
 
-// 總分鐘數 <-> "HH:MM" 字串（給 <input type="time"> 用；手機上是左時右分的滾輪）
-function minToTimeStr(min) {
-  const clamped = Math.max(0, Math.min(min, 23 * 60 + 59));
-  const h = Math.floor(clamped / 60);
-  const m = clamped % 60;
-  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
-}
-function timeStrToMin(str) {
-  const [h, m] = str.split(":").map((n) => parseInt(n, 10) || 0);
-  return h * 60 + m;
+// 把分鐘數轉成「X 小時 Y 分」顯示字（時長，非時刻）
+function formatDuration(min) {
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  if (h === 0) return `${m} 分`;
+  if (m === 0) return `${h} 小時`;
+  return `${h} 小時 ${m} 分`;
 }
 
-// 綁定 time picker：只在使用者「關掉滾輪」後（blur）才寫回，不用 change。
-// iOS 滾動時每動一格就會發 change，若當下 updateStop→重繪，會把還開著的
-// 滾輪彈掉、看起來像「還沒按完成就自己設定了」。改用 blur 就等使用者選定。
-function bindTimePicker(inp, getCurrentMin, commit) {
-  inp.addEventListener("blur", () => {
-    if (!inp.value) return;
-    const v = timeStrToMin(inp.value);
-    if (v !== getCurrentMin()) commit(v);
-  });
+// 時長選單：單一 <select>，選項「X 小時 Y 分」（0 分~12 小時，每 15 分一階）。
+// 用自訂 select 而非原生 <input type="time">——後者的顯示格式（12/24 小時、
+// 上午/凌晨…）跟著各裝置語言／地區設定跑、無法控制，會在不同手機顯示不一、
+// 又因字寬不定把字卡撐到換行。select 由我們控制，每支手機一致、寬度固定。
+function durationSelect(currentMin, onChange) {
+  const sel = document.createElement("select");
+  sel.className = "durationSelect";
+  const cur = Math.max(0, currentMin || 0);
+  const vals = [];
+  for (let m = 0; m <= 12 * 60; m += 15) vals.push(m);
+  if (!vals.includes(cur)) vals.push(cur); // 保留舊資料的非 15 分整數值
+  vals.sort((a, b) => a - b);
+  for (const m of vals) {
+    const o = document.createElement("option");
+    o.value = String(m);
+    o.textContent = formatDuration(m);
+    sel.appendChild(o);
+  }
+  sel.value = String(cur);
+  // select 的 change 只在選定後觸發一次（不像 time input 滾動中連發），可直接用
+  sel.addEventListener("change", () => onChange(parseInt(sel.value, 10)));
+  return sel;
 }
 
-// 停留時間：原生 time picker，左時右分、分鐘 5 分一階（存回仍是總分鐘數）
+// 停留時間：單一「X 小時 Y 分」下拉（存回仍是總分鐘數）
 function stayPicker(stop) {
   const wrap = document.createElement("span");
   wrap.className = "stayWrap";
-  const inp = document.createElement("input");
-  inp.type = "time";
-  inp.step = "300"; // 5 分鐘一階
-  inp.className = "timePicker";
-  inp.value = minToTimeStr(stop.stayMin || 0);
-  inp.title = "預計停留時間（時:分）";
-  bindTimePicker(inp, () => stop.stayMin || 0, (v) => store.updateStop(stop.id, { stayMin: v }));
-  wrap.append(document.createTextNode("停留"), inp);
+  const sel = durationSelect(stop.stayMin || 0, (v) => store.updateStop(stop.id, { stayMin: v }));
+  sel.title = "預計停留時間";
+  wrap.append(document.createTextNode("停留"), sel);
   return wrap;
 }
 
-// 兩站之間的交通時間（連接線）：同樣用原生 time picker，左時右分、5 分一階
+// 兩站之間的交通時間（連接線）：同樣用「X 小時 Y 分」下拉
 function travelConnector(stop) {
   const li = document.createElement("li");
   li.className = "travelConnector";
   const icon = document.createElement("span");
   icon.textContent = "🚗";
-  const input = document.createElement("input");
-  input.type = "time";
-  input.step = "300";
-  input.className = "timePicker";
-  input.value = minToTimeStr(stop.travelMin || 0);
-  input.title = "到下一站的交通時間（時:分）";
-  bindTimePicker(input, () => stop.travelMin || 0, (v) => store.updateStop(stop.id, { travelMin: v }));
-  li.append(icon, document.createTextNode("車程"), input);
+  const sel = durationSelect(stop.travelMin || 0, (v) => store.updateStop(stop.id, { travelMin: v }));
+  sel.title = "到下一站的交通時間";
+  li.append(icon, document.createTextNode("車程"), sel);
   return li;
 }
 

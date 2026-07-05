@@ -16,20 +16,23 @@
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-  <header id="topbar">
-    <span id="appTitle">🧳 旅遊小幫手</span>
-    <select id="tripSelect" title="切換旅程"></select>
-    <button id="exportBtn" title="匯出 PDF">📄</button>
-    <button id="syncBtn" title="共享與同步">🔗</button>
-    <button id="newTripBtn">＋新旅程</button>
-  </header>
+  <!-- 頂列＋分頁包在同一個 sticky 容器：往下滑縮小、往上滑展開 -->
+  <div id="stickyNav">
+    <header id="topbar">
+      <span id="appTitle">🧳<span class="navText"> 旅遊小幫手</span></span>
+      <select id="tripSelect" title="切換旅程"></select>
+      <button id="exportBtn" title="匯出 PDF">📄</button>
+      <button id="syncBtn" title="共享與同步">🔗</button>
+      <button id="newTripBtn">＋<span class="navText">新旅程</span></button>
+    </header>
 
-  <nav id="tabs">
-    <button class="tab active" data-view="itinerary">🗓️ 行程</button>
-    <button class="tab" data-view="expenses">💰 分帳</button>
-    <button class="tab" data-view="notebook">📔 資訊</button>
-    <button class="tab" data-view="packing">🎒 清單</button>
-  </nav>
+    <nav id="tabs">
+      <button class="tab active" data-view="itinerary">🗓️<span class="navText"> 行程</span></button>
+      <button class="tab" data-view="expenses">💰<span class="navText"> 分帳</span></button>
+      <button class="tab" data-view="notebook">📔<span class="navText"> 資訊</span></button>
+      <button class="tab" data-view="packing">🎒<span class="navText"> 清單</span></button>
+    </nav>
+  </div>
 
   <main id="main">
     <!-- 無旅程時的空狀態 -->
