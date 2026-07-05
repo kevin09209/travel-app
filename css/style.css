@@ -32,7 +32,13 @@ html, body {
 .hidden { display: none !important; }
 .mutedText { color: var(--muted); font-size: 12px; }
 
-/* ---------- 頂列 ---------- */
+/* ---------- 頂列＋分頁的 sticky 容器（往下滑縮小、往上滑展開）---------- */
+#stickyNav {
+  position: sticky;
+  top: 0;
+  z-index: 1100;
+}
+
 #topbar {
   display: flex;
   align-items: center;
@@ -40,12 +46,26 @@ html, body {
   padding: 12px 14px;
   background: var(--card);
   border-bottom: 2px solid var(--ink);
-  position: sticky;
-  top: 0;
-  z-index: 1100;
+  transition: padding 0.22s ease;
 }
 
 #appTitle { font-weight: 800; white-space: nowrap; font-size: 17px; }
+
+/* 可收合的文字（app 名稱、分頁名、＋新旅程）：縮小時收起只留 emoji */
+.navText {
+  display: inline-block;
+  overflow: hidden;
+  white-space: nowrap;
+  vertical-align: middle;
+  max-width: 8em;
+  transition: max-width 0.22s ease, opacity 0.18s ease;
+}
+.nav-min .navText { max-width: 0; opacity: 0; }
+
+/* 縮小態：頂列變扁、分頁變成 icon 列 */
+.nav-min #topbar { padding-top: 6px; padding-bottom: 6px; }
+.nav-min #tabs { padding-top: 6px; }
+.nav-min .tab { padding: 8px; font-size: 18px; }
 
 #tripSelect {
   flex: 1;
@@ -99,9 +119,6 @@ button:disabled {
   gap: 8px;
   background: transparent;
   padding: 10px 14px 0;
-  position: sticky;
-  top: 59px;
-  z-index: 1100;
   max-width: 748px;
   margin: 0 auto;
 }
@@ -115,6 +132,7 @@ button:disabled {
   padding: 11px;
   font-size: 15px;
   box-shadow: none;
+  transition: padding 0.15s ease, font-size 0.15s ease;
 }
 
 .tab:hover { transform: translateY(-2px); box-shadow: none; }
@@ -331,9 +349,8 @@ input:focus, select:focus, textarea:focus {
 .stopMeta select { width: auto; padding: 5px 8px; font-size: 13px; border-radius: 8px; }
 .stayWrap { display: flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 700; }
 
-/* 原生 time picker（停留、車程共用）：不撐滿、僅容納「時:分」
-   用 input.timePicker 拉高特異性，蓋過上面全域 input[type="time"] 的 width:100% */
-input.timePicker { width: 108px; flex-shrink: 0; padding: 5px 8px; font-size: 13px; border-radius: 8px; }
+/* 時長下拉（停留、車程共用）：寬度隨內容、不撐滿，顯示由我們控制、每台裝置一致 */
+.durationSelect { width: auto; flex-shrink: 0; padding: 5px 8px; font-size: 13px; border-radius: 8px; }
 
 .stopNote {
   width: 100%;
