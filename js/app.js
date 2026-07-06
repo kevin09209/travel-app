@@ -414,7 +414,8 @@ function renderItinerary(trip) {
   mapView.renderDay(stops, STOP_CATS);
 }
 
-// 景點是否屬於某位旅伴：空 memberIds＝全員一起，永遠算符合。
+// 景點是否屬於某位旅伴：
+// 一般景點＝全員一起，任何篩選都顯示。
 // 分組時段：任一組的 memberIds 為空(全員)或含此旅伴就算符合。
 function stopMatchesMember(stop, memberId) {
   if (stop.groups && stop.groups.length) {
@@ -423,8 +424,7 @@ function stopMatchesMember(stop, memberId) {
       return ids.length === 0 || ids.includes(memberId);
     });
   }
-  const ids = stop.memberIds || [];
-  return ids.length === 0 || ids.includes(memberId);
+  return true; // 非分組＝全員
 }
 
 // 行程頁上方的旅伴篩選列：全部＋各旅伴，單選
@@ -585,9 +585,14 @@ function normalStopBody(stop, trip) {
   const note = expandableNote(stop.id, stop.note, (v) => store.updateStop(stop.id, { note: v }));
   body.append(nameRow, meta, note);
 
-  // 同行旅伴 +（右側）「改成分組」小按鈕。只有一位成員時不顯示
+  // 一般景點＝全員一起，直接顯示「全員」不列名字（避免有些手機換行）。
+  // 要分開行動時按「分組」，再到各組選哪些成員參加。只有一位成員時不顯示。
   if (trip.members.length >= 2) {
-    const cRow = companionRow(stop, trip);
+    const cRow = document.createElement("div");
+    cRow.className = "companionRow";
+    const label = document.createElement("span");
+    label.className = "companionLabel";
+    label.textContent = "🧑‍🤝‍🧑 全員";
     const splitBtn = document.createElement("button");
     splitBtn.className = "splitToggleBtn";
     splitBtn.textContent = "🍽️ 分組";
@@ -597,7 +602,7 @@ function normalStopBody(stop, trip) {
       if (newId) expandedGroupIds.add(newId); // 新的空組預設展開好填寫
       render();
     });
-    cRow.appendChild(splitBtn);
+    cRow.append(label, splitBtn);
     body.appendChild(cRow);
   }
   return body;
@@ -784,21 +789,6 @@ function buildMemberChips(trip, ids, onToggle) {
     frag.appendChild(chip);
   }
   return frag;
-}
-
-// 同行旅伴選擇列：每位成員一個 toggle chip；全不選＝全員一起
-function companionRow(stop, trip) {
-  const row = document.createElement("div");
-  row.className = "companionRow";
-  const ids = stop.memberIds || [];
-
-  const label = document.createElement("span");
-  label.className = "companionLabel";
-  label.textContent = ids.length === 0 ? "🧑‍🤝‍🧑 全員" : "🧑‍🤝‍🧑 同行";
-  row.appendChild(label);
-
-  row.appendChild(buildMemberChips(trip, ids, (mid) => store.toggleStopMember(stop.id, mid)));
-  return row;
 }
 
 // 可展開／收合的備註欄：收合時單行（過長會被截斷），點右側 icon 展開成多行看全部。
