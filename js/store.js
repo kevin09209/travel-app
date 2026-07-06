@@ -210,21 +210,6 @@ export function updateStop(stopId, patch) {
   persist();
 }
 
-// 切換某景點的同行旅伴（有就移除、沒有就加入）
-export function toggleStopMember(stopId, memberId) {
-  const trip = getActiveTrip();
-  if (!trip) return;
-  const stop = trip.stops.find((s) => s.id === stopId);
-  if (!stop) return;
-  if (!Array.isArray(stop.memberIds)) stop.memberIds = [];
-  if (stop.memberIds.includes(memberId)) {
-    stop.memberIds = stop.memberIds.filter((id) => id !== memberId);
-  } else {
-    stop.memberIds.push(memberId);
-  }
-  persist();
-}
-
 export function removeStop(stopId) {
   const trip = getActiveTrip();
   if (!trip) return;
@@ -246,13 +231,13 @@ function newGroup(name = "", memberIds = []) {
   return { id: uid(), name, memberIds: [...memberIds], note: "", lat: null, lng: null };
 }
 
-// 把一般景點改成分組時段：保留原地點為第 1 組，再加一個空組讓使用者填。
-// 回傳新加的空組 id（供 UI 預設展開它）。
+// 把一般景點改成分組時段：保留原地點為第 1 組（成員留空、待使用者選），
+// 再加一個空組讓使用者填。回傳新加的空組 id（供 UI 預設展開它）。
 export function convertStopToGroups(stopId) {
   const stop = findStop(stopId);
   if (!stop || (stop.groups && stop.groups.length)) return null;
   const empty = newGroup();
-  stop.groups = [newGroup(stop.name, stop.memberIds), empty];
+  stop.groups = [newGroup(stop.name), empty];
   persist();
   return empty.id;
 }
