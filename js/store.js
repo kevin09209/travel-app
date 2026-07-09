@@ -59,6 +59,10 @@ function normalizeTrip(trip) {
   if (!Array.isArray(trip.settlements)) trip.settlements = [];
   if (!Array.isArray(trip.notes)) trip.notes = [];
   if (!Array.isArray(trip.packing)) trip.packing = [];
+  if (!Array.isArray(trip.favorites)) trip.favorites = []; // 我的最愛（想去清單）
+  trip.favorites.forEach((f) => {
+    if (!f.category) f.category = "sight";
+  });
   // 舊旅程第一次看到打包清單功能時，若還沒動過（空清單）就補上預設項目；
   // 已加過自己項目的不動，且只補這一次，避免使用者清空後又被重新塞回來
   if (!trip.packingSeeded) {
@@ -131,6 +135,7 @@ export function createTrip({ name, startDate, endDate, memberNames }) {
     notes: [],       // 記事本卡片
     packing: defaultPackingItems(), // 打包清單 { id, name, category, checked, createdAt }
     packingSeeded: true,
+    favorites: [],   // 我的最愛（想去清單）{ id, name, category, lat, lng, createdAt }
     dayStarts: {},   // { [dayIndex]: "HH:MM" } 每日出發時間
   };
   state.trips.push(trip);
@@ -178,7 +183,7 @@ export function getDayStart(trip, dayIndex) {
 }
 
 // ---------- 行程景點 ----------
-export function addStop({ dayIndex, name, lat, lng }) {
+export function addStop({ dayIndex, name, lat, lng, category }) {
   const trip = getActiveTrip();
   if (!trip) return null;
   const sameDay = trip.stops.filter((s) => s.dayIndex === dayIndex);
@@ -189,7 +194,7 @@ export function addStop({ dayIndex, name, lat, lng }) {
     name,
     lat,
     lng,
-    category: "sight",
+    category: category || "sight",
     stayMin: 60,
     travelMin: 0,
     memberIds: [], // 同行旅伴；空＝全員一起
@@ -522,5 +527,44 @@ export function removePackingItem(itemId) {
   const trip = getActiveTrip();
   if (!trip) return;
   trip.packing = trip.packing.filter((p) => p.id !== itemId);
+  persist();
+}
+
+// ---------- 我的最愛（想去清單）----------
+export function addFavorite({ name, lat, lng, category }) {
+  const trip = getActiveTrip();
+  if (!trip) return { ok: false, error: "沒有旅程" };
+  const trimmed = (name || "").trim();
+  if (!trimmed) return { ok: false, error: "沒有地點名稱" };
+  // 同名同座標的就不重複加
+  const dup = trip.favorites.some(
+    (f) => f.name === trimmed && f.lat === lat && f.lng === lng
+  );
+  if (dup) return { ok: false, error: "這個地方已經在最愛裡了" };
+  trip.favorites.unshift({
+    id: uid(),
+    name: trimmed,
+    category: category || "sight",
+    lat: typeof lat === "number" ? lat : null,
+    lng: typeof lng === "number" ? lng : null,
+    createdAt: new Date().toISOString(),
+  });
+  persist();
+  return { ok: true };
+}
+
+export function updateFavorite(favId, patch) {
+  const trip = getActiveTrip();
+  if (!trip) return;
+  const f = trip.favorites.find((x) => x.id === favId);
+  if (!f) return;
+  Object.assign(f, patch);
+  persist();
+}
+
+export function removeFavorite(favId) {
+  const trip = getActiveTrip();
+  if (!trip) return;
+  trip.favorites = trip.favorites.filter((f) => f.id !== favId);
   persist();
 }

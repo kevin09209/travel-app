@@ -31,6 +31,7 @@
       <button class="tab" data-view="expenses">💰<span class="navText"> 分帳</span></button>
       <button class="tab" data-view="notebook">📔<span class="navText"> 資訊</span></button>
       <button class="tab" data-view="packing">🎒<span class="navText"> 清單</span></button>
+      <button class="tab" data-view="favorites">❤️<span class="navText"> 最愛</span></button>
     </nav>
   </div>
 
@@ -151,6 +152,25 @@
       </div>
       <div id="packProgress"></div>
       <div id="packList"></div>
+    </section>
+
+    <!-- 我的最愛（想去清單）檢視 -->
+    <section id="favoritesView" class="view hidden">
+      <div class="card">
+        <h3>❤️ 收藏想去的地方</h3>
+        <div id="favSearchBox">
+          <input id="favSearchInput" type="search" placeholder="搜尋地點，或貼上 Google Maps 網址" autocomplete="off">
+          <button id="favSearchBtn" class="primary">搜尋</button>
+        </div>
+        <ul id="favSearchResults" class="searchResults hidden"></ul>
+        <div id="favMsg"></div>
+      </div>
+      <div id="favAddToRow" class="card slim hidden">
+        <span>🗓️ 加入到</span>
+        <select id="favDaySelect"></select>
+        <span class="mutedText">點收藏項目的「加入行程」就會排進這天</span>
+      </div>
+      <div id="favList"></div>
     </section>
   </main>
 

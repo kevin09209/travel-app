@@ -104,22 +104,25 @@ button:disabled {
 /* 緊貼「旅遊小幫手」那排，中間不留縫（padding-top 0） */
 #tabs {
   display: flex;
-  gap: 8px;
+  gap: 6px;
   background: transparent;
-  padding: 8px 14px 0;
+  padding: 8px 10px 0;
   max-width: 748px;
   margin: 0 auto;
 }
 
 .tab {
   flex: 1;
+  min-width: 0; /* 讓 5 個分頁能一起塞進窄螢幕、不撐出水平捲動 */
   border-radius: 0 0 14px 14px;
   border-top: none;
   background: #F4E9DC;
   color: var(--muted);
-  padding: 11px;
-  font-size: 15px;
+  padding: 10px 5px;
+  font-size: 14px;
   box-shadow: none;
+  white-space: nowrap;
+  overflow: hidden;
 }
 
 .tab:hover { transform: translateY(2px); box-shadow: none; }
@@ -751,6 +754,36 @@ input:focus, select:focus, textarea:focus {
   flex-shrink: 0;
 }
 .packItemDel:hover { transform: scale(1.2); box-shadow: none; }
+
+/* ---------- 我的最愛（想去清單）---------- */
+#favSearchBox { display: flex; gap: 10px; }
+#favSearchBox input { flex: 1; min-width: 0; }
+#favMsg { min-height: 18px; font-size: 13px; font-weight: 700; margin-top: 8px; }
+#favMsg.ok { color: var(--green); }
+#favMsg.err { color: var(--danger); }
+
+.favCard {
+  background: var(--card);
+  border: 2px solid var(--ink);
+  border-radius: 14px;
+  padding: 11px 12px;
+  margin-bottom: 10px;
+  box-shadow: var(--shadow-sm);
+}
+.favTop { display: flex; align-items: center; gap: 8px; }
+.favCatSelect { width: auto; flex-shrink: 0; padding: 4px 6px; font-size: 12px; border-radius: 8px; }
+.favName {
+  flex: 1; min-width: 0; font-weight: 800; font-size: 14px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.favActions { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+.favAddBtn { font-size: 13px; padding: 6px 12px; border-radius: 10px; }
+.favDelBtn {
+  margin-left: auto; flex-shrink: 0;
+  border: none; box-shadow: none; background: transparent;
+  color: var(--danger); font-size: 14px; padding: 2px 6px;
+}
+.favDelBtn:hover { transform: scale(1.2); box-shadow: none; }
 
 /* ---------- 共享同步 ---------- */
 #syncBtn.synced { background: var(--blue-soft); border-color: var(--blue); }
