@@ -87,6 +87,7 @@ const NOTE_TYPES = {
 let currentView = "itinerary";
 let currentDay = 0;
 let currentMemberFilter = null; // null＝全部；否則為某位旅伴的 member id
+let favTargetDay = 0; // 最愛「加入到」的目標天（index）
 let selectedExpCat = "food";
 let liveRate = null;
 const expandedNoteIds = new Set();
@@ -102,6 +103,7 @@ bindItinerary();
 bindExpenses();
 bindNotebook();
 bindPacking();
+bindFavorites();
 bindSync();
 bindScrollNav();
 store.subscribe(render);
@@ -1530,6 +1532,105 @@ function packItemRow(item) {
   return li;
 }
 
+// ---------- 我的最愛（想去清單）----------
+function bindFavorites() {
+  const input = $("#favSearchInput");
+  const doSearch = () =>
+    runPlaceSearch(input.value, $("#favSearchResults"), ({ name, lat, lng }) => {
+      const result = store.addFavorite({ name, lat, lng });
+      setFavMsg(result.ok ? `已收藏「${name}」` : result.error, result.ok);
+      input.value = "";
+    });
+  $("#favSearchBtn").addEventListener("click", doSearch);
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      doSearch();
+    }
+  });
+}
+
+function setFavMsg(text, ok) {
+  const el = $("#favMsg");
+  el.textContent = text;
+  el.className = ok ? "ok" : "err";
+}
+
+function renderFavorites(trip) {
+  // 「加入到」的天數選單
+  const dayCount = store.tripDayCount(trip);
+  if (favTargetDay >= dayCount) favTargetDay = dayCount - 1;
+  const daySel = $("#favDaySelect");
+  daySel.innerHTML = "";
+  for (let i = 0; i < dayCount; i++) {
+    const opt = document.createElement("option");
+    opt.value = String(i);
+    opt.textContent = `Day ${i + 1}・${store.tripDayDate(trip, i)}`;
+    daySel.appendChild(opt);
+  }
+  daySel.value = String(favTargetDay);
+  daySel.onchange = () => (favTargetDay = parseInt(daySel.value, 10) || 0);
+
+  const list = $("#favList");
+  list.innerHTML = "";
+  $("#favAddToRow").classList.toggle("hidden", trip.favorites.length === 0);
+
+  if (trip.favorites.length === 0) {
+    list.innerHTML =
+      "<div style='color:#8B8798;text-align:center;padding:24px'>搜尋想去的地方先收藏起來，規劃行程時再排進某一天 ❤️</div>";
+    return;
+  }
+  for (const fav of trip.favorites) list.appendChild(favoriteCard(fav));
+}
+
+function favoriteCard(fav) {
+  const cat = STOP_CATS[fav.category] || STOP_CATS.other;
+  const card = document.createElement("div");
+  card.className = "favCard";
+
+  const top = document.createElement("div");
+  top.className = "favTop";
+  const catSel = document.createElement("select");
+  catSel.className = "favCatSelect";
+  for (const [key, c] of Object.entries(STOP_CATS)) {
+    const opt = document.createElement("option");
+    opt.value = key;
+    opt.textContent = `${c.emoji} ${c.label}`;
+    catSel.appendChild(opt);
+  }
+  catSel.value = fav.category;
+  catSel.addEventListener("change", () => store.updateFavorite(fav.id, { category: catSel.value }));
+  const name = document.createElement("span");
+  name.className = "favName";
+  name.textContent = fav.name;
+  name.title = fav.name;
+  top.append(catSel, name);
+
+  const actions = document.createElement("div");
+  actions.className = "favActions";
+  const add = document.createElement("button");
+  add.className = "primary favAddBtn";
+  add.textContent = "🗓️ 加入行程";
+  add.addEventListener("click", () => {
+    store.addStop({ dayIndex: favTargetDay, name: fav.name, lat: fav.lat, lng: fav.lng, category: fav.category });
+    setFavMsg(`已把「${fav.name}」加到 Day ${favTargetDay + 1}`, true);
+  });
+  const nav = document.createElement("button");
+  nav.className = "minibtn";
+  nav.textContent = "🧭";
+  nav.title = "在 Google Maps 導航";
+  nav.addEventListener("click", () => openNav({ name: fav.name, lat: fav.lat, lng: fav.lng }));
+  const del = document.createElement("button");
+  del.className = "favDelBtn";
+  del.textContent = "✕";
+  del.title = "從最愛移除";
+  del.addEventListener("click", () => store.removeFavorite(fav.id));
+  actions.append(add, nav, del);
+
+  card.append(top, actions);
+  return card;
+}
+
 // ---------- 匯出 PDF（走瀏覽器列印，手機直接「儲存為 PDF」）----------
 function buildPrintReport(trip) {
   const frag = document.createDocumentFragment();
@@ -1785,6 +1886,7 @@ function render() {
   $("#expensesView").classList.toggle("hidden", !hasTrip || currentView !== "expenses");
   $("#notebookView").classList.toggle("hidden", !hasTrip || currentView !== "notebook");
   $("#packingView").classList.toggle("hidden", !hasTrip || currentView !== "packing");
+  $("#favoritesView").classList.toggle("hidden", !hasTrip || currentView !== "favorites");
   document.querySelectorAll(".tab").forEach((tab) => {
     tab.classList.toggle("active", tab.dataset.view === currentView);
   });
@@ -1798,6 +1900,8 @@ function render() {
     renderExpenses(trip);
   } else if (currentView === "packing") {
     renderPacking(trip);
+  } else if (currentView === "favorites") {
+    renderFavorites(trip);
   } else {
     renderNotebook(trip);
   }
