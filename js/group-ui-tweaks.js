@@ -1,4 +1,4 @@
-// 分組卡 UI 微調：把「加一組」改成小型浮動＋，對齊最後一位分組成員左側。
+// 分組卡 UI 微調：把「加一組」改成小型浮動＋，只在分組展開時顯示。
 let initialized = false;
 let decorating = false;
 let observer = null;
@@ -59,9 +59,7 @@ function decorate() {
       const body = $(".stopBody", card);
       const list = $(".groupList", card);
       const addBtn = $(":scope > .stopBody > .addGroupBtn", card);
-      const groupHeads = list ? [...list.querySelectorAll(":scope > .groupRow > .groupHead")] : [];
-      const lastHead = groupHeads.at(-1);
-      if (!body || !list || !addBtn || !lastHead) continue;
+      if (!body || !list || !addBtn) continue;
 
       addBtn.classList.remove("groupAddInlineBtn");
       addBtn.classList.add("groupAddFloatingBtn");
@@ -69,8 +67,19 @@ function decorate() {
       addBtn.title = "加一組";
       addBtn.setAttribute("aria-label", "加一組");
 
-      // 對齊最後一個成員列中央，按鈕保持在分組框外的左側，不增加版位高度。
-      const top = list.offsetTop + lastHead.offsetTop + lastHead.offsetHeight / 2 - 16;
+      // 只有分組細節展開時才顯示；全部收合時，按鈕要一起消失。
+      const openRows = [...list.querySelectorAll(":scope > .groupRow.open")];
+      const activeRow = openRows.at(-1);
+      const activeHead = activeRow ? $(".groupHead", activeRow) : null;
+      if (!activeHead) {
+        addBtn.style.display = "none";
+        addBtn.style.removeProperty("top");
+        continue;
+      }
+
+      addBtn.style.display = "flex";
+      // 對齊目前展開的分組成員列中央，保持在分組框外左側，不增加版位高度。
+      const top = list.offsetTop + activeRow.offsetTop + activeHead.offsetHeight / 2 - 16;
       addBtn.style.top = `${Math.max(0, top)}px`;
     }
   } finally {
