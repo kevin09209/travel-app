@@ -1,0 +1,82 @@
+/* ---------- 手機頂部 UI 微調 ---------- */
+
+/* 日期籤需要保留旋轉、縮放與實色陰影的安全空間，避免第一個與最後一個被 overflow 裁切。 */
+#dayChips {
+  padding: 7px 10px 14px;
+  scroll-padding-inline: 10px;
+  scroll-snap-type: x proximity;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+#dayChips::-webkit-scrollbar { display: none; }
+
+.dayChip {
+  min-height: 44px;
+  padding-inline: 16px;
+  scroll-snap-align: start;
+}
+
+/* 原本 scale(1.06) 在窄螢幕容易碰到捲動容器邊界；保留貼紙感但收斂幅度。 */
+.dayChip.active {
+  transform: rotate(-1.5deg) scale(1.025);
+  transform-origin: center;
+}
+
+@media (max-width: 480px) {
+  /* 第一列只保留品牌、旅程、模式與選單，尺寸全部落在一致的 44px 節奏。 */
+  #topbar {
+    display: grid;
+    grid-template-columns: 32px minmax(0, 1fr) 44px 44px;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 12px;
+  }
+
+  #appTitle {
+    width: 32px;
+    height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 19px;
+    line-height: 1;
+  }
+
+  #tripSelect {
+    height: 44px;
+    padding: 0 11px;
+    border-radius: 14px;
+    font-size: 14px;
+  }
+
+  #travelModeBtn,
+  #appMenuBtn {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 14px;
+  }
+
+  /* 第二列是主要導覽，統一高度與間距，避免和第一列搶視覺焦點。 */
+  #tabs {
+    gap: 5px;
+    padding: 7px 12px 0;
+  }
+
+  .tab {
+    min-height: 48px;
+    padding: 9px 3px;
+    border-radius: 0 0 12px 12px;
+    font-size: 13px;
+  }
+
+  #dayChips {
+    padding-left: 12px;
+    padding-right: 12px;
+    scroll-padding-inline: 12px;
+  }
+}
