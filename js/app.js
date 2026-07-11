@@ -220,6 +220,69 @@ function bindItinerary() {
   $("#dayStartInput").addEventListener("change", () => {
     store.setDayStart(currentDay, $("#dayStartInput").value || "09:00");
   });
+  // 搜尋列旁的「❤️」：從我的最愛挑地點加進目前這天
+  $("#favPickBtn").addEventListener("click", () => {
+    const panel = $("#favPicker");
+    const willOpen = panel.classList.contains("hidden");
+    if (willOpen) renderFavPicker();
+    panel.classList.toggle("hidden");
+  });
+}
+
+// 行程頁的「我的最愛」快選面板：點收藏 → 直接加進目前這天（currentDay）
+function renderFavPicker() {
+  const panel = $("#favPicker");
+  const trip = store.getActiveTrip();
+  const favs = (trip && trip.favorites) || [];
+  panel.innerHTML = "";
+
+  const head = document.createElement("div");
+  head.className = "favPickHead";
+  const title = document.createElement("strong");
+  title.textContent = `❤️ 最愛 → 加到 Day ${currentDay + 1}`;
+  const close = document.createElement("button");
+  close.className = "favPickClose";
+  close.textContent = "✕";
+  close.addEventListener("click", () => panel.classList.add("hidden"));
+  head.append(title, close);
+  panel.appendChild(head);
+
+  if (favs.length === 0) {
+    const empty = document.createElement("div");
+    empty.className = "favPickEmpty";
+    empty.textContent = "還沒有收藏。到「❤️ 最愛」分頁把想去的地方加進來吧";
+    panel.appendChild(empty);
+    return;
+  }
+
+  const listEl = document.createElement("div");
+  listEl.className = "favPickList";
+  for (const fav of favs) {
+    const cat = STOP_CATS[fav.category] || STOP_CATS.other;
+    const item = document.createElement("button");
+    item.className = "favPickItem";
+    const nameEl = document.createElement("span");
+    nameEl.className = "favPickName";
+    nameEl.textContent = `${cat.emoji} ${fav.name}`;
+    const add = document.createElement("span");
+    add.className = "favPickAdd";
+    add.textContent = "＋";
+    item.append(nameEl, add);
+    item.addEventListener("click", () => {
+      // 加進目前這天；面板不關，可連續加多個，加過的標成「已加入」
+      store.addStop({
+        dayIndex: currentDay,
+        name: fav.name,
+        lat: fav.lat,
+        lng: fav.lng,
+        category: fav.category,
+      });
+      item.classList.add("added");
+      add.textContent = "✓ 已加入";
+    });
+    listEl.appendChild(item);
+  }
+  panel.appendChild(listEl);
 }
 
 // 解析 Google Maps 網址：回傳 { name, lat, lng, short } 或 null（不是地圖網址）
@@ -379,6 +442,7 @@ function renderItinerary(trip) {
     btn.textContent = `Day ${i + 1} · ${store.tripDayDate(trip, i)}`;
     btn.addEventListener("click", () => {
       currentDay = i;
+      $("#favPicker").classList.add("hidden"); // 換天就收起最愛快選，避免標籤停在舊天
       render();
     });
     chips.appendChild(btn);

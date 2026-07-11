@@ -239,8 +239,41 @@ input:focus, select:focus, textarea:focus {
 
 #dayStartRow input[type="time"] { width: 140px; }
 
-#searchBox { display: flex; gap: 10px; margin-top: 2px; }
-#placeInput { flex: 1; box-shadow: var(--shadow-sm); }
+#searchBox { display: flex; gap: 8px; margin-top: 2px; }
+#placeInput { flex: 1; min-width: 0; box-shadow: var(--shadow-sm); }
+#favPickBtn { flex-shrink: 0; padding: 9px 12px; background: var(--coral-soft); border-color: var(--coral); }
+
+/* 行程頁「我的最愛」快選面板 */
+#favPicker {
+  margin-top: 10px;
+  padding: 12px;
+  background: var(--card);
+  border: 2px solid var(--ink);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+}
+.favPickHead { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+.favPickHead strong { font-size: 14px; font-weight: 800; }
+.favPickClose { border: none; box-shadow: none; background: transparent; color: var(--muted); padding: 2px 6px; }
+.favPickClose:hover { transform: none; box-shadow: none; color: var(--danger); }
+.favPickList { display: grid; gap: 8px; max-height: 300px; overflow-y: auto; overscroll-behavior: contain; }
+.favPickItem {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 11px;
+  text-align: left;
+  background: #fff;
+  box-shadow: none;
+  font-weight: 700;
+}
+.favPickItem:hover { background: var(--coral-soft); box-shadow: var(--shadow-sm); }
+.favPickName { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; }
+.favPickAdd { flex-shrink: 0; color: var(--coral); font-weight: 800; }
+.favPickItem.added { background: var(--blue-soft); border-color: var(--blue); }
+.favPickItem.added .favPickAdd { color: #0B6BB8; }
+.favPickEmpty { padding: 12px 6px; text-align: center; color: var(--muted); font-size: 13px; }
 
 #searchResults, .searchResults {
   list-style: none;
