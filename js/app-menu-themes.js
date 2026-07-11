@@ -28,11 +28,12 @@ let overlay = null;
 let sheet = null;
 
 const $ = (selector, root = document) => root.querySelector(selector);
+const hasTheme = (value) => Object.prototype.hasOwnProperty.call(THEMES, value);
 
 function readSavedTheme() {
   try {
     const value = localStorage.getItem(THEME_STORAGE_KEY);
-    return Object.hasOwn(THEMES, value) ? value : "sticker";
+    return hasTheme(value) ? value : "sticker";
   } catch {
     return "sticker";
   }
@@ -47,7 +48,7 @@ function saveTheme(theme) {
 }
 
 function applyTheme(theme, { persist = true } = {}) {
-  currentTheme = Object.hasOwn(THEMES, theme) ? theme : "sticker";
+  currentTheme = hasTheme(theme) ? theme : "sticker";
   document.documentElement.dataset.theme = currentTheme;
   if (persist) saveTheme(currentTheme);
 
@@ -90,11 +91,13 @@ function moveActionButton(button, icon, text, detail, host) {
   button.classList.add("menuActionBtn");
   button.innerHTML = actionMarkup(icon, text, detail);
   button.removeAttribute("title");
-  button.addEventListener("click", () => closeMenu({ restoreFocus: false }));
+  // 使用 capture，確保開 dialog 或列印前先收起底部選單。
+  button.addEventListener("click", () => closeMenu({ restoreFocus: false }), { capture: true });
   host.appendChild(button);
 }
 
 function buildThemeChoices(host) {
+  if (!host) return;
   for (const [key, theme] of Object.entries(THEMES)) {
     const button = document.createElement("button");
     button.type = "button";
