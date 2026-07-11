@@ -1,0 +1,188 @@
+/* ---------- 編輯／旅行模式 ---------- */
+#travelModeBtn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 8px 10px;
+  background: var(--blue-soft);
+  border-color: var(--blue);
+  color: #0B6BB8;
+}
+#travelModeBtn[aria-pressed="true"] {
+  background: var(--yellow);
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
+/* 旅行模式只保留旅途中會用到的行程資訊與操作。 */
+body.travelMode #exportBtn,
+body.travelMode #newTripBtn,
+body.travelMode #tabs .tab:not([data-view="itinerary"]),
+body.travelMode #dayStartRow,
+body.travelMode #searchBox,
+body.travelMode #searchResults,
+body.travelMode #favPicker,
+body.travelMode .dragHandle,
+body.travelMode .stopBtns,
+body.travelMode .splitToggleBtn,
+body.travelMode .addGroupBtn,
+body.travelMode .groupAddFloatingBtn,
+body.travelMode .groupSearchRow,
+body.travelMode .groupChipsLabel,
+body.travelMode .companionChips,
+body.travelMode .groupDetail > .noteRow,
+body.travelMode .groupDelBtn,
+body.travelMode .backupHint,
+body.travelMode .backupSearchRow,
+body.travelMode .backupFavRow,
+body.travelMode .backupSearchResults,
+body.travelMode .backupDelBtn,
+body.travelMode .groupBackupSearchRow,
+body.travelMode .groupBackupFavoriteRow,
+body.travelMode .groupBackupResults,
+body.travelMode .groupBackupDelete {
+  display: none !important;
+}
+
+body.travelMode #tabs {
+  max-width: 220px;
+}
+body.travelMode #tabs .tab[data-view="itinerary"] {
+  flex: 1;
+}
+
+body.travelMode .stopCard {
+  gap: 8px;
+  padding: 10px;
+  margin-bottom: 9px;
+  transition: opacity 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+}
+body.travelMode .stopLeft {
+  min-width: 45px;
+  gap: 5px;
+}
+body.travelMode .stopBody {
+  min-width: 0;
+}
+body.travelMode .stopName {
+  font-size: 16px;
+}
+body.travelMode .stopNavBtn {
+  padding: 5px 9px;
+}
+
+/* 停留時間與類別是編輯資訊；備案按鈕仍保留在同一列。 */
+body.travelMode .stopMeta > select,
+body.travelMode .stopMeta .stayWrap {
+  display: none !important;
+}
+body.travelMode .stopMeta {
+  min-height: 0;
+  margin-top: 4px;
+  justify-content: flex-end;
+}
+body.travelMode .stopMeta:not(.backupCompactMetaHost) {
+  display: none;
+}
+
+/* 一般景點有旅伴列時，只保留右側備案按鈕。 */
+body.travelMode .companionRow.backupCompactHost {
+  justify-content: flex-end;
+  margin-top: 5px;
+  padding-top: 0;
+  border-top: none;
+}
+body.travelMode .companionRow.backupCompactHost .companionLabel {
+  display: none;
+}
+body.travelMode .companionRow:not(.backupCompactHost) {
+  display: none;
+}
+
+/* 分組時段的標題改成唯讀文字外觀；每組仍可展開看導航與備案。 */
+body.travelMode .slotTitleInput {
+  border: none;
+  border-bottom: none;
+  border-radius: 0;
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+  pointer-events: none;
+}
+body.travelMode .groupDetail {
+  padding-bottom: 9px;
+}
+body.travelMode .groupCurrentPlace {
+  margin-top: 7px;
+}
+body.travelMode .groupActions {
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+body.travelMode .groupBackupPanel,
+body.travelMode .backupPanel {
+  margin-top: 7px;
+}
+
+/* 行程進度：完成變淡、現在與下一站用不同色框快速辨識。 */
+body.travelMode .stopCard.travel-completed {
+  opacity: 0.48;
+  filter: saturate(0.65);
+}
+body.travelMode .stopCard.travel-current {
+  border-color: var(--coral);
+  box-shadow: 4px 4px 0 var(--coral);
+}
+body.travelMode .stopCard.travel-next {
+  border-color: var(--blue);
+  box-shadow: 4px 4px 0 var(--blue);
+}
+.travelStatusBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 52px;
+  padding: 2px 6px;
+  border: 1.5px solid currentColor;
+  border-radius: 999px;
+  background: var(--card);
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+.travel-current .travelStatusBadge {
+  color: #B4402F;
+  background: var(--coral-soft);
+}
+.travel-next .travelStatusBadge {
+  color: #0B6BB8;
+  background: var(--blue-soft);
+}
+.travel-completed .travelStatusBadge {
+  color: var(--muted);
+}
+
+@media (max-width: 480px) {
+  #travelModeBtn {
+    padding: 7px 9px;
+  }
+  #travelModeBtn .travelModeText {
+    display: none;
+  }
+  body.travelMode #topbar {
+    gap: 7px;
+    padding: 10px;
+  }
+  body.travelMode #main {
+    padding: 10px;
+  }
+  body.travelMode .stopCard {
+    padding: 9px;
+  }
+  body.travelMode .arriveBadge {
+    font-size: 11px;
+    padding: 2px 6px;
+  }
+}

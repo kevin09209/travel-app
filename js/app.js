@@ -1,13 +1,15 @@
-// 進入點：先載入既有 App，再掛上景點與分組備案 UI。
+// 進入點：先載入既有 App，再掛上備案、分組與旅行模式 UI。
 export * from "./app-core.js";
 import { initStopBackups } from "./stop-backups.js";
 import { initCompactStopBackupLayout } from "./stop-backups-compact.js";
 import { initGroupBackups } from "./group-backups.js";
 import { initGroupUiTweaks } from "./group-ui-tweaks.js";
+import { initTravelMode } from "./travel-mode.js";
 
 initStopBackups();
 initCompactStopBackupLayout();
 initGroupUiTweaks();
+initTravelMode();
 
 // 分組備案只需要知道行程列表是否被重新渲染。
 // 若監看 stopList 的整個 subtree，備案模組自己增刪按鈕時也會再次觸發 observer，形成無限迴圈。
