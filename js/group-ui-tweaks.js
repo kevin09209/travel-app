@@ -1,4 +1,4 @@
-// 分組卡 UI 微調：把「＋ 加一組」縮成小按鈕，放進分組列表左下角。
+// 分組卡 UI 微調：把「加一組」改成小型浮動＋，對齊最後一位分組成員左側。
 let initialized = false;
 let decorating = false;
 let observer = null;
@@ -10,28 +10,38 @@ function injectStyles() {
   const style = document.createElement("style");
   style.id = "group-ui-tweaks-style";
   style.textContent = `
-    .groupAddInlineRow {
-      display: flex;
-      justify-content: flex-start;
-      padding: 8px 11px 10px;
-      border-top: 1.5px dashed #33323D33;
-      background: var(--card);
+    .splitCard .stopBody {
+      position: relative;
     }
-    .groupAddInlineBtn.addGroupBtn {
-      width: auto;
-      margin-top: 0;
-      padding: 4px 10px;
-      font-size: 12px;
-      font-weight: 800;
-      border-radius: 999px;
+    .groupAddFloatingBtn.addGroupBtn {
+      position: absolute;
+      left: -54px;
+      width: 32px;
+      height: 32px;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      border-style: dashed;
+      color: var(--blue);
+      background: var(--blue-soft);
+      box-shadow: var(--shadow-sm);
+      font-size: 22px;
+      font-weight: 700;
+      line-height: 1;
+      z-index: 2;
+    }
+    .groupAddFloatingBtn.addGroupBtn:hover {
+      transform: translateY(-1px);
     }
     @media (max-width: 480px) {
-      .groupAddInlineRow {
-        padding: 7px 10px 9px;
-      }
-      .groupAddInlineBtn.addGroupBtn {
-        font-size: 11px;
-        padding: 4px 9px;
+      .groupAddFloatingBtn.addGroupBtn {
+        left: -50px;
+        width: 30px;
+        height: 30px;
+        font-size: 20px;
       }
     }
   `;
@@ -46,18 +56,22 @@ function decorate() {
   decorating = true;
   try {
     for (const card of stopList.querySelectorAll(".stopCard.splitCard")) {
+      const body = $(".stopBody", card);
       const list = $(".groupList", card);
-      const addBtn = $(":scope > .stopBody > .addGroupBtn", card) || $(":scope .groupAddInlineRow > .addGroupBtn", card);
-      if (!list || !addBtn) continue;
+      const addBtn = $(":scope > .stopBody > .addGroupBtn", card);
+      const groupHeads = list ? [...list.querySelectorAll(":scope > .groupRow > .groupHead")] : [];
+      const lastHead = groupHeads.at(-1);
+      if (!body || !list || !addBtn || !lastHead) continue;
 
-      let row = $(".groupAddInlineRow", list);
-      if (!row) {
-        row = document.createElement("div");
-        row.className = "groupAddInlineRow";
-      }
-      addBtn.classList.add("groupAddInlineBtn");
-      row.replaceChildren(addBtn);
-      if (row.parentElement !== list) list.appendChild(row);
+      addBtn.classList.remove("groupAddInlineBtn");
+      addBtn.classList.add("groupAddFloatingBtn");
+      addBtn.textContent = "＋";
+      addBtn.title = "加一組";
+      addBtn.setAttribute("aria-label", "加一組");
+
+      // 對齊最後一個成員列中央，按鈕保持在分組框外的左側，不增加版位高度。
+      const top = list.offsetTop + lastHead.offsetTop + lastHead.offsetHeight / 2 - 16;
+      addBtn.style.top = `${Math.max(0, top)}px`;
     }
   } finally {
     decorating = false;
