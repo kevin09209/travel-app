@@ -23,7 +23,6 @@
 
 | 情境 | 讀這個檔 |
 |---|---|
-| **完整開發流程：規劃→實作→本機瀏覽器實測→PR→盯部署，以及本 repo 地雷** | [`docs/AI-WORKFLOW.md`](docs/AI-WORKFLOW.md) |
 | 專案架構、檔案職責、部署、Supabase | [`CLAUDE.md`](CLAUDE.md) |
 | 派 subagent／選模型／自己做還是派工 | [`claude-system/10-model-dispatch.md`](claude-system/10-model-dispatch.md) |
 | 該不該升級模型／算不算完成／該不該問使用者／方向對不對 | [`claude-system/20-judgment.md`](claude-system/20-judgment.md) |
