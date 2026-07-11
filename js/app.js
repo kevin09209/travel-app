@@ -3,9 +3,11 @@ export * from "./app-core.js";
 import { initStopBackups } from "./stop-backups.js";
 import { initCompactStopBackupLayout } from "./stop-backups-compact.js";
 import { initGroupBackups } from "./group-backups.js";
+import { initGroupUiTweaks } from "./group-ui-tweaks.js";
 
 initStopBackups();
 initCompactStopBackupLayout();
+initGroupUiTweaks();
 
 // 分組備案只需要知道行程列表是否被重新渲染。
 // 若監看 stopList 的整個 subtree，備案模組自己增刪按鈕時也會再次觸發 observer，形成無限迴圈。
