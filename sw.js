@@ -1,6 +1,6 @@
 // Service Worker：離線快取 app shell；動態資料（Supabase/匯率/地理服務）永遠走網路。
 // 發新版時把 CACHE_VERSION +1，舊快取會在 activate 時清掉。
-const CACHE_VERSION = "v24";
+const CACHE_VERSION = "v25";
 const CACHE_NAME = "travel-app-" + CACHE_VERSION;
 
 const CORE_ASSETS = [
@@ -10,6 +10,7 @@ const CORE_ASSETS = [
   "css/style-core.css",
   "css/travel-mode.css",
   "css/app-menu-themes.css",
+  "css/top-ui-polish.css",
   "js/app.js",
   "js/app-core.js",
   "js/stop-backups.js",
