@@ -1,14 +1,18 @@
 // Service Worker：離線快取 app shell；動態資料（Supabase/匯率/地理服務）永遠走網路。
 // 發新版時把 CACHE_VERSION +1，舊快取會在 activate 時清掉。
-const CACHE_VERSION = "v15";
+const CACHE_VERSION = "v16";
 const CACHE_NAME = "travel-app-" + CACHE_VERSION;
 
 const CORE_ASSETS = [
   ".",
   "index.html",
   "css/style.css",
+  "css/style-core.css",
   "js/app.js",
+  "js/app-core.js",
+  "js/stop-backups.js",
   "js/store.js",
+  "js/store-core.js",
   "js/sync.js",
   "js/map.js",
   "js/rates.js",
@@ -37,7 +41,7 @@ self.addEventListener("activate", (event) => {
     caches
       .keys()
       .then((keys) =>
-        Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k)))
+        Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key)))
       )
       .then(() => self.clients.claim())
   );
@@ -47,28 +51,26 @@ self.addEventListener("fetch", (event) => {
   const request = event.request;
   if (request.method !== "GET") return;
   const url = new URL(request.url);
-  if (NETWORK_ONLY_HOSTS.includes(url.hostname)) return; // 交給瀏覽器直接連網
+  if (NETWORK_ONLY_HOSTS.includes(url.hostname)) return;
 
   if (url.origin === location.origin) {
-    // 自家資源：網路優先（拿最新版），失敗退快取（離線可用）
     event.respondWith(
       fetch(request)
-        .then((res) => {
-          const copy = res.clone();
+        .then((response) => {
+          const copy = response.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
-          return res;
+          return response;
         })
         .catch(() => caches.match(request, { ignoreSearch: true }))
     );
   } else {
-    // CDN（Leaflet、字型、supabase-js、地圖磚）：快取優先，背景更新
     event.respondWith(
       caches.match(request).then((cached) => {
         const fetched = fetch(request)
-          .then((res) => {
-            const copy = res.clone();
+          .then((response) => {
+            const copy = response.clone();
             caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
-            return res;
+            return response;
           })
           .catch(() => cached);
         return cached || fetched;
