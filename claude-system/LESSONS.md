@@ -53,3 +53,11 @@
 - 情境：想用 `Start-Process python -ArgumentList "-c", "import app; ..."` 背景啟動伺服器。
 - 坑：含空格的參數字串被拆散，Python 只收到 `import`，SyntaxError。
 - 之後怎麼做：多語句的啟動指令寫成臨時 .py 腳本檔再用 Start-Process 執行，不用 `-c` 內嵌。
+
+## 2026-10-30 Supabase 文件式同步的兩個隱形坑（travel-app）
+- 情境：檢查旅程雲端同步，用假 Supabase（模擬 RLS、JSONB、Realtime 回音）重現資料遺失。
+- 坑 1：JSONB 會把物件鍵重排（長度→字典序），`JSON.stringify(本機) === JSON.stringify(雲端)` 永遠不相等，
+  自己推出去的回音也會整份覆蓋本機，連續編輯時較新的修改被吃掉。
+- 坑 2：RLS 擋下的 `update` 不報錯、只是 0 筆，舊碼因此在「沒寫進去」時仍顯示已同步。
+- 之後怎麼做：比對用鍵排序後的 canonical JSON；update 加 `.select("id")` 檢查筆數；
+  有未送出修改時不套用遠端版本；待上傳清單存 localStorage，連上／回前景時先補傳再拉。

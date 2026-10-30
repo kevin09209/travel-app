@@ -1220,8 +1220,11 @@ function bindSync() {
   $("#shareBtn").addEventListener("click", async () => {
     const trip = store.getActiveTrip();
     if (!trip) return;
+    const btn = $("#shareBtn");
+    btn.disabled = true; // 避免連點產生兩份雲端旅程
     setSyncMsg("上傳中…", true);
     const result = await sync.shareTrip(trip);
+    btn.disabled = false;
     if (result.ok) {
       setSyncMsg("上傳成功！邀請碼已產生", true);
       renderSyncDialog();
