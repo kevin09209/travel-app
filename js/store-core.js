@@ -147,7 +147,10 @@ export function createTrip({ name, startDate, endDate, memberNames }) {
 export function setActiveTrip(tripId) {
   if (state.trips.some((t) => t.id === tripId)) {
     state.activeTripId = tripId;
+    // 只是切換旅程、內容沒變，不推雲端（避免用本機舊版蓋掉旅伴的新修改）
+    suppressSync = true;
     persist();
+    suppressSync = false;
   }
 }
 
@@ -418,6 +421,19 @@ export function stripCloud(trip) {
   return rest;
 }
 
+// 鍵排序後再序列化：雲端 JSONB 會重排物件鍵，直接 JSON.stringify 比對永遠不相等
+export function canonicalJSON(value) {
+  return JSON.stringify(value, (_k, v) =>
+    v && typeof v === "object" && !Array.isArray(v)
+      ? Object.fromEntries(Object.keys(v).sort().map((k) => [k, v[k]]))
+      : v
+  );
+}
+
+export function findTripByCloudId(cloudId) {
+  return state.trips.find((t) => t.cloud && t.cloud.id === cloudId) || null;
+}
+
 export function linkTripCloud(tripId, cloud) {
   const trip = state.trips.find((t) => t.id === tripId);
   if (!trip) return;
@@ -431,7 +447,7 @@ export function linkTripCloud(tripId, cloud) {
 export function applyRemoteTrip(cloudId, data) {
   const trip = state.trips.find((t) => t.cloud && t.cloud.id === cloudId);
   if (!trip) return;
-  if (JSON.stringify(stripCloud(trip)) === JSON.stringify(data)) return;
+  if (canonicalJSON(stripCloud(trip)) === canonicalJSON(data)) return;
   const cloud = trip.cloud;
   const idx = state.trips.indexOf(trip);
   const merged = { ...data, cloud };
